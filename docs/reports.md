@@ -170,10 +170,10 @@ Partial 1 [P]: ACTIVE
 ```text
 D-20 Rhythm Setup (09 00 00)
 Note       Tone                              Level  Pan     Reverb
-A1         i11 (LowTomTom1)                  100    Center  OFF
-B1         r15 (Bass Drum-1)                 100    Center  OFF
-C2         r16 (Bass Drum-2)                 100    Center  OFF
-C#2        r25 (Rim Shot)                    100    Center  ON
+A1         i11 LowTomTom1                    100    Center  OFF
+B1         r15 Bass Drum-1                   100    Center  OFF
+C2         r16 Bass Drum-2                   100    Center  OFF
+C#2        r25 Rim Shot                      100    Center  ON
 ...
 ```
 

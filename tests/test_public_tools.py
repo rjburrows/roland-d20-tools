@@ -67,6 +67,9 @@ class PublicConverterTests(unittest.TestCase):
                 self.assertEqual(cli.main(["inspect", str(source)]), 0)
             self.assertTrue(inspection.getvalue().endswith("\n\n"))
             self.assertIn("This is an ALL file.", inspection.getvalue())
+            rhythm_output = reports.rhythm(source)
+            self.assertIn("i01 User Tone", rhythm_output)
+            self.assertNotIn("i01 (User Tone)", rhythm_output)
             errors = io.StringIO()
             with redirect_stderr(errors):
                 self.assertEqual(cli.main(["report", "patch", str(source), "--patch", "129"]), 2)

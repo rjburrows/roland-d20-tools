@@ -353,7 +353,7 @@ def rhythm(path: Path) -> str:
         offset, tone_number = index * 4, image.data[index * 4]
         if tone_number == 127:
             continue
-        label = _tone_label(2, tone_number, names) if tone_number < 64 else _tone_label(3, tone_number - 64, names)
+        label = _tone_label(2, tone_number, names, parenthesize_name=False) if tone_number < 64 else _tone_label(3, tone_number - 64, names, parenthesize_name=False)
         pan = image.data[offset + 2]
         pan_text = "Center" if pan == 7 else f"L{7 - pan}" if pan < 7 else f"R{pan - 7}"
         lines.append(f"{note_name(index + 24):<10} {label:<33} {image.data[offset + 1]:<6} {pan_text:<7} {'ON' if image.data[offset + 3] == 1 else 'OFF'}")
