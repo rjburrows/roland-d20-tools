@@ -17,7 +17,7 @@ d20-tools report REPORT INPUT [REPORT-OPTION]
 | --- | --- | --- |
 | `report system INPUT` | No extra option. Requires complete 50-byte area `10H`. | Master tune, global reverb, part reserves/levels/pans, and stored MIDI channels. |
 | `report patch INPUT` | `--patch 1..128` is optional. Requires area `07H`; the selected record must be complete. | Without `--patch`, a populated-patch index. With it, layout, split, both tone assignments, tuning, bender, assign and reverb values. |
-| `report timbre INPUT` | `--timbre I-11..I-88` or `--timbre C-11..C-88` is optional. Requires area `05H`. | Without `--timbre`, a 128-slot index. With it, the complete tone assignment and performance values for that slot. |
+| `report timbre INPUT` | `--timbre A-11..A-88` or `--timbre B-11..B-88` is optional. Requires area `05H`. | Without `--timbre`, a 128-Timbre index. With it, the complete tone assignment and performance values for that Timbre. |
 | `report tone INPUT` | `--tone i01..i64` is optional. Uses permanent `08H`, falling back to temporary `04H`. | Without `--tone`, complete internal/user Tone names. With it, structure, partial activity, wave generator, LFO, TVF and TVA values. |
 | `report rhythm INPUT` | No extra option. Requires complete 340-byte area `09H`. | Assigned Rhythm Setup keys (C1–C8), tone, level, pan and reverb. |
 
@@ -26,13 +26,18 @@ Examples:
 ```sh
 d20-tools report system D20BACKUP.mid
 d20-tools report patch D20BACKUP.mid --patch 1
-d20-tools report timbre D20BACKUP.syx --timbre I-26
+d20-tools report timbre D20BACKUP.syx --timbre A-26
 d20-tools report tone D20BACKUP.mid --tone i12
 d20-tools report rhythm D20BACKUP.mid
 ```
 
 The option follows the input filename. This avoids ambiguity and makes it easy
 to paste the command shown by `d20-tools report REPORT --help`.
+
+The Timbre area contains two 64-location **A** and **B** panel banks, each
+numbered `11` through `88`. `I` (internal) and `C` (memory card) are a
+separate storage-mode choice on the instrument; they are not Timbre-bank
+labels, so they are deliberately not accepted as report identifiers.
 
 ## Tone inspection scope
 
@@ -42,6 +47,22 @@ dump has no permanent Tone area). It does **not** decode Preset A or Preset B
 Tones. Those are fixed D-20 ROM elements rather than user data in a DT1 dump.
 They may appear by name in Patch, Timbre, or Rhythm reports when an editable
 record refers to one.
+
+When a Tone partial uses PCM (`P`), its Wave line includes the PCM name from
+the D-20 two-bank reference. The displayed `wave` number is the manual's
+one-based number (1–128); the parenthesis also gives the zero-based value
+stored in the dump. The raw bank selector is `0` for PCM bank 0 and may be
+`1`, `2`, or `3` for PCM bank 1; an unusual value is shown explicitly. For
+example: `PCM bank 0, wave 62 (Acoustic Bass; stored index 61, reference Bank
+1)`.
+
+Tone and Timbre conversions use the minima and maxima published in the D-20
+manuals. In particular, Tone Bias Points retain their `<` or `>` direction,
+TVF Bias Level is `-7…+7`, and TVA Bias Levels are `0…-12`. If a bounded
+stored value is malformed, the report shows the raw value as invalid rather
+than presenting a plausible but incorrect setting. See
+[the memory-address reference](memory-map.md#manual-checked-ranges-and-offsets)
+for the byte offsets and complete range table.
 
 ## Example output
 
@@ -63,7 +84,7 @@ Part 2         3    100  Center  1
 Rhythm         6    100  Per-key  1
 ```
 
-### One Patch and Timbre slot
+### One Patch and Timbre
 
 ```text
 Patch 1: Warm Pad Fade
@@ -79,7 +100,7 @@ Fine tune         -3                                 +5
 ```
 
 ```text
-Timbre slot I-11
+Timbre A-11
 Tone: i01 (AcouPiano1)
 Key shift: +0; fine tune: +0
 Bender range: 2; assign mode: 1; reverb: ON
@@ -97,8 +118,8 @@ Partial 1 [P]: ACTIVE
   Wave: PCM bank 0, wave 33; pulse width 0; pulse-width velocity +0
   LFO: rate 0, depth 0, modulation 0
   Pitch envelope: depth 1, velocity 0, time key follow 4; times [0, 43, 69, 100]
-  TVF: cutoff 0, resonance 0, key follow 3/8, bias C1 / +0
-  TVA: level 100, velocity +45; bias 1 A9 / +4; bias 2 A#3 / +2
+  TVF: cutoff 0, resonance 0, key follow 3/8, bias <A1 / +0
+  TVA: level 100, velocity +45; bias 1 >C4 / -12; bias 2 <G4 / -4
 ```
 
 ### Rhythm Setup

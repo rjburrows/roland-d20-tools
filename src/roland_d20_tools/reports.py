@@ -46,9 +46,79 @@ TVF_KF = ("0", "1/8", "1/4", "3/8", "1/2", "5/8", "3/4", "7/8", "1", "1.5", "2",
 TKF = ("0", "1", "2", "3", "4")
 REVERB = ("Room 1", "Room 2", "Hall 1", "Hall 2", "Plate", "Delay 1", "Delay 2", "Delay 3", "OFF")
 
+# The D-20 reference chart calls these Bank 1 and Bank 2, with PCM numbers
+# 1..128. DT1 stores the same values as bank 0/1 and waveform index 0..127.
+PCM_BANKS = (
+    (
+        "Bass Drum-1", "Bass Drum-2", "Bass Drum-3", "Snare Drum-1", "Snare Drum-2", "Snare Drum-3", "Snare Drum-4", "Tom Tom-1",
+        "Tom Tom-2", "High-Hat", "High-Hat (Loop)", "Crash Cymbal-1", "Crash Cymbal-2 (Loop)", "Ride Cymbal-1", "Ride Cymbal-2 (Loop)", "Cup",
+        "China Cymbal-1", "China Cymbal-2 (Loop)", "Rim Shot", "Hand Clap", "Mute High Conga", "Conga", "Bongo", "Cowbell", "Tambourine", "Agogo",
+        "Claves", "Timbale High", "Timbale Low", "Cabasa", "Timpani Attack", "Timpani", "Acoustic Piano High", "Acoustic Piano Low", "Piano Forte Jump",
+        "Organ Percussion", "Trumpet", "Lips", "Trombone", "Clarinet", "Flute High", "Flute Low", "Steamer", "Indian Flute", "Breath", "Vibraphone High",
+        "Vibraphone Low", "Marimba", "Xylophone High", "Xylophone Low", "Kalimba", "Wind Bell", "Chime Bar", "Hammer", "Guiro", "Chink", "Nails",
+        "Fretless Bass", "Pull Bass", "Slap Bass", "Thump Bass", "Acoustic Bass", "Electric Bass", "Gut Guitar", "Steel Guitar", "Dirty Guitar", "Pizzicato",
+        "Harp", "Contrabass", "Cello", "Violin-1", "Violin-2", "Koto", "Draw Bars (Loop)", "High Organ (Loop)", "Low Organ", "Trumpet (Loop)",
+        "Trombone (Loop)", "Sax-1 (Loop)", "Sax-2 (Loop)", "Reed (Loop)", "Slap Bass (Loop)", "Acoustic Bass (Loop)", "Electric Bass-1 (Loop)",
+        "Electric Bass-2 (Loop)", "Gut Guitar (Loop)", "Steel Guitar (Loop)", "Electric Guitar (Loop)", "Clav (Loop)", "Cello (Loop)", "Violin (Loop)",
+        "Electric Piano-1 (Loop)", "Electric Piano-2 (Loop)", "Harpsichord-1 (Loop)", "Harpsichord-2 (Loop)", "Telephone Bell (Loop)",
+        "Female Voice-1 (Loop)", "Female Voice-2 (Loop)", "Male Voice-1 (Loop)", "Male Voice-2 (Loop)", "Spectrum-1 (Loop)", "Spectrum-2 (Loop)",
+        "Spectrum-3 (Loop)", "Spectrum-4 (Loop)", "Spectrum-5 (Loop)", "Spectrum-6 (Loop)", "Spectrum-7 (Loop)", "Spectrum-8 (Loop)",
+        "Spectrum-9 (Loop)", "Spectrum-10 (Loop)", "Noise (Loop)", "Shot-1", "Shot-2", "Shot-3", "Shot-4", "Shot-5", "Shot-6", "Shot-7",
+        "Shot-8", "Shot-9", "Shot-10", "Shot-11", "Shot-12", "Shot-13", "Shot-14", "Shot-15", "Shot-16", "Shot-17",
+    ),
+    (
+        "Bass Drum-1", "Bass Drum-2", "Bass Drum-3", "Snare Drum-1", "Snare Drum-2", "Snare Drum-3", "Snare Drum-4", "Tom Tom-1",
+        "Tom Tom-2", "High-Hat", "High-Hat (Loop)", "Crash Cymbal-1", "Crash Cymbal-2 (Loop)", "Ride Cymbal-1", "Ride Cymbal-2 (Loop)", "Cup",
+        "China Cymbal-1", "China Cymbal-2 (Loop)", "Rim Shot", "Hand Clap", "Mute High Conga", "Conga", "Bongo", "Cowbell", "Tambourine", "Agogo",
+        "Claves", "Timbale High", "Timbale Low", "Cabasa", *tuple(f"Loop-{index}" for index in range(1, 65)), *tuple(f"Jam-{index} (Loop)" for index in range(1, 35)),
+    ),
+)
+
 
 def _value(table: tuple[str, ...], value: int) -> str:
     return table[value] if 0 <= value < len(table) else f"Unknown({value})"
+
+
+def _raw(value: int, minimum: int, maximum: int) -> str:
+    """Format a documented unsigned parameter without hiding bad stored data."""
+    return str(value) if minimum <= value <= maximum else f"Invalid({value}; expected {minimum}..{maximum})"
+
+
+def _signed(value: int, zero: int, minimum: int, maximum: int) -> str:
+    """Format a signed parameter whose stored value is offset from zero."""
+    if not minimum <= value <= maximum:
+        return f"Invalid({value}; expected {minimum}..{maximum})"
+    return f"{value - zero:+d}"
+
+
+def _negative(value: int, maximum: int) -> str:
+    """Format a stored 0..maximum parameter that represents 0..-maximum."""
+    if not 0 <= value <= maximum:
+        return f"Invalid({value}; expected 0..{maximum})"
+    return f"{-value:+d}"
+
+
+def _one_based(value: int, maximum: int) -> str:
+    """Format a zero-based enumerated value using its displayed number."""
+    if not 0 <= value <= maximum:
+        return f"Invalid({value}; expected 0..{maximum})"
+    return str(value + 1)
+
+
+def _bias_point(value: int) -> str:
+    """Decode the D-20's 7-bit, directional bias-point representation.
+
+    Values 0..63 mean <A1..<C7 and 64..127 mean >A1..>C7.  The lower
+    six bits advance chromatically from A1, rather than using MIDI's C-based
+    note zero.  This is distinct from Wave Generator pitch values.
+    """
+    if not 0 <= value <= 127:
+        return f"Invalid({value})"
+    note_names = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+    pitch = value & 0x3F
+    note_index = pitch + 9  # Stored 0 is A1; stored 3 is C2.
+    direction = "<" if value < 64 else ">"
+    return f"{direction}{note_names[note_index % 12]}{note_index // 12 + 1}"
 
 
 def _load(path: Path):
@@ -75,6 +145,20 @@ def _tone_label(group: int, number: int, names: dict[int, str]) -> str:
     if group == 3:
         return f"r{number + 1:02d} ({_value(RHYTHM_TONES, number)})"
     return f"unknown group {group}, tone {number + 1}"
+
+
+def _pcm_wave_name(selector: int, index: int) -> str:
+    """Format PCM values against the two-bank, one-based reference chart.
+
+    Factory Tone data uses selector values 0, 2, and 3. The D-20's two PCM
+    banks are selected as 0 (Bank 1) or non-zero (Bank 2), so the raw selector
+    is retained in the display whenever it is not the canonical bank value.
+    """
+    bank = 0 if selector == 0 else 1
+    if not 0 <= index < len(PCM_BANKS[bank]):
+        return f"PCM bank {bank}, wave index {index} (unknown waveform; stored selector {selector})"
+    selector_note = "" if selector == bank else f", stored selector {selector}"
+    return f"PCM bank {bank}, wave {index + 1} ({PCM_BANKS[bank][index]}; stored index {index}{selector_note}, reference Bank {bank + 1})"
 
 
 def system(path: Path) -> str:
@@ -123,8 +207,9 @@ def patch(path: Path, number: int | None = None) -> str:
     ))
 
 
-def _slot(index: int) -> str:
-    bank = "I" if index < 64 else "C"
+def _timbre_id(index: int) -> str:
+    """Return the D-20's A/B panel-bank identifier for a Timbre record."""
+    bank = "A" if index < 64 else "B"
     item = index if index < 64 else index - 64
     return f"{bank}-{item // 8 + 1}{item % 8 + 1}"
 
@@ -134,38 +219,38 @@ def timbre(path: Path, selection: str | None = None) -> str:
     image = _area(messages, 0x05, 128 * 8, "Timbre data")
     names = user_tone_names(messages)
     if selection is None:
-        lines = ["Slot   Source      Tone"]
+        lines = ["Timbre  Source      Tone"]
         for index in range(128):
             start = index * 8
             if image.complete(start, 8):
                 group, number = image.data[start], image.data[start + 1]
                 source = ("Preset A", "Preset B", "User", "Rhythm")[group] if group < 4 else "Unknown"
-                lines.append(f"{_slot(index):<6} {source:<11} {_tone_label(group, number, names)}")
+                lines.append(f"{_timbre_id(index):<8} {source:<11} {_tone_label(group, number, names)}")
         return "\n".join(lines)
     target = selection.upper().strip()
-    choices = {_slot(index): index for index in range(128)}
+    choices = {_timbre_id(index): index for index in range(128)}
     if target not in choices:
-        raise D20Error("--timbre must be I-11 through I-88 or C-11 through C-88.")
+        raise D20Error("--timbre must be A-11 through A-88 or B-11 through B-88.")
     start = choices[target] * 8
     if not image.complete(start, 8):
-        raise D20Error(f"Timbre slot {target} is incomplete; no values were guessed.")
+        raise D20Error(f"Timbre {target} is incomplete; no values were guessed.")
     data = image.data[start : start + 8]
     return "\n".join((
-        f"Timbre slot {target}", f"Tone: {_tone_label(data[0], data[1], names)}", f"Key shift: {data[2] - 24:+d}; fine tune: {data[3] - 50:+d}",
-        f"Bender range: {data[4]}; assign mode: {data[5] + 1}; reverb: {'ON' if data[6] == 1 else 'OFF'}",
+        f"Timbre {target}", f"Tone: {_tone_label(data[0], data[1], names)}", f"Key shift: {_signed(data[2], 24, 0, 48)}; fine tune: {_signed(data[3], 50, 0, 100)}",
+        f"Bender range: {_raw(data[4], 0, 24)}; assign mode: {_one_based(data[5], 3)}; reverb: {'ON' if data[6] == 1 else 'OFF' if data[6] == 0 else _raw(data[6], 0, 1)}",
     ))
 
 
 def _partial(data: bytes, offset: int, source: str) -> list[str]:
     value = lambda index: data[offset + index]
-    waveform = ("Saw" if value(4) else "Square") if source == "S" else f"PCM bank {1 if value(4) else 0}, wave {value(5) + 1}"
+    waveform = ("Saw" if value(4) else "Square") if source == "S" else _pcm_wave_name(value(4), value(5))
     return [
-        f"  Wave generator: pitch {note_name(value(0), d20_octaves=True)}, fine {value(1) - 50:+d}, key follow {_value(WG_KF, value(2))}, bender {'ON' if value(3) else 'OFF'}",
-        f"  Wave: {waveform}; pulse width {value(6)}; pulse-width velocity {value(7) - 7:+d}",
-        f"  LFO: rate {value(20)}, depth {value(21)}, modulation {value(22)}",
-        f"  Pitch envelope: depth {value(8)}, velocity {value(9)}, time key follow {_value(TKF, value(10))}; times {list(data[offset + 11:offset + 15])}",
-        f"  TVF: cutoff {value(23)}, resonance {value(24)}, key follow {_value(TVF_KF, value(25))}, bias {note_name(value(26), d20_octaves=True)} / {value(27) - 7:+d}",
-        f"  TVA: level {value(41)}, velocity {value(42) - 50:+d}; bias 1 {note_name(value(43), d20_octaves=True)} / {value(44) - 7:+d}; bias 2 {note_name(value(45), d20_octaves=True)} / {value(46) - 7:+d}",
+        f"  Wave generator: pitch {note_name(value(0), d20_octaves=True) if value(0) <= 96 else _raw(value(0), 0, 96)}, fine {_signed(value(1), 50, 0, 100)}, key follow {_value(WG_KF, value(2))}, bender {'ON' if value(3) == 1 else 'OFF' if value(3) == 0 else _raw(value(3), 0, 1)}",
+        f"  Wave: {waveform}; pulse width {_raw(value(6), 0, 100)}; pulse-width velocity {_signed(value(7), 7, 0, 14)}",
+        f"  LFO: rate {_raw(value(20), 0, 100)}, depth {_raw(value(21), 0, 100)}, modulation {_raw(value(22), 0, 100)}",
+        f"  Pitch envelope: depth {_raw(value(8), 0, 10)}, velocity {_raw(value(9), 0, 3)}, time key follow {_value(TKF, value(10))}; times {[int(_raw(item, 0, 100)) if 0 <= item <= 100 else _raw(item, 0, 100) for item in data[offset + 11:offset + 15]]}",
+        f"  TVF: cutoff {_raw(value(23), 0, 100)}, resonance {_raw(value(24), 0, 30)}, key follow {_value(TVF_KF, value(25))}, bias {_bias_point(value(26))} / {_signed(value(27), 7, 0, 14)}",
+        f"  TVA: level {_raw(value(41), 0, 100)}, velocity {_signed(value(42), 50, 0, 100)}; bias 1 {_bias_point(value(43))} / {_negative(value(44), 12)}; bias 2 {_bias_point(value(45))} / {_negative(value(46), 12)}",
     ]
 
 

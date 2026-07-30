@@ -52,7 +52,7 @@ def parser() -> argparse.ArgumentParser:
         if name == "patch":
             report.add_argument("--patch", type=int, metavar="1..128", help="show one complete Patch record")
         elif name == "timbre":
-            report.add_argument("--timbre", metavar="I-11..I-88 | C-11..C-88", help="show one complete Timbre slot")
+            report.add_argument("--timbre", metavar="A-11..A-88 | B-11..B-88", help="show one complete Timbre")
         elif name == "tone":
             report.add_argument("--tone", type=parse_internal_tone, metavar="i01..i64", help="show one complete internal/user Tone record")
     commands.add_parser("song", help="Song .222 conversion (work in progress)")

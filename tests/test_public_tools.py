@@ -51,7 +51,7 @@ class PublicConverterTests(unittest.TestCase):
             cases = (
                 (["report", "system", str(source)], "Global System"),
                 (["report", "patch", str(source), "--patch", "1"], "Patch 1:"),
-                (["report", "timbre", str(source), "--timbre", "I-11"], "Timbre slot I-11"),
+                (["report", "timbre", str(source), "--timbre", "A-11"], "Timbre A-11"),
                 (["report", "tone", str(source), "--tone", "i01"], "Internal/user Tone i01:"),
                 (["report", "rhythm", str(source)], "Rhythm Setup"),
             )
@@ -68,6 +68,58 @@ class PublicConverterTests(unittest.TestCase):
         for invalid in ("1", "i1", "i00", "i65", "a01"):
             with self.assertRaises(Exception):
                 cli.parse_internal_tone(invalid)
+
+    def test_pcm_wave_names_use_one_based_reference_numbers(self) -> None:
+        partial = bytearray(58)
+        partial[4], partial[5] = 0, 61  # Stored 0-based index; reference Bank 1, No. 62.
+        self.assertIn("PCM bank 0, wave 62 (Acoustic Bass; stored index 61, reference Bank 1)", reports._partial(bytes(partial), 0, "P")[1])
+        partial[4], partial[5] = 1, 64  # Stored 0-based index; reference Bank 2, No. 65.
+        self.assertIn("PCM bank 1, wave 65 (Loop-35; stored index 64, reference Bank 2)", reports._partial(bytes(partial), 0, "P")[1])
+        partial[4], partial[5] = 3, 126  # Factory dump: any non-zero selector maps to PCM Bank 2.
+        self.assertIn("PCM bank 1, wave 127 (Jam-33 (Loop); stored index 126, stored selector 3, reference Bank 2)", reports._partial(bytes(partial), 0, "P")[1])
+
+    def test_tone_and_timbre_manual_value_offsets(self) -> None:
+        self.assertEqual(reports._bias_point(0), "<A1")
+        self.assertEqual(reports._bias_point(63), "<C7")
+        self.assertEqual(reports._bias_point(64), ">A1")
+        self.assertEqual(reports._bias_point(127), ">C7")
+
+        partial = bytearray(58)
+        partial[0], partial[1], partial[6], partial[7] = 96, 100, 100, 14
+        partial[8], partial[9], partial[20], partial[21], partial[22] = 10, 3, 100, 100, 100
+        partial[23], partial[24], partial[26], partial[27] = 100, 30, 127, 14
+        partial[41], partial[42], partial[43], partial[44], partial[45], partial[46] = 100, 0, 64, 12, 63, 0
+        output = "\n".join(reports._partial(bytes(partial), 0, "S"))
+        self.assertIn("pitch C9, fine +50", output)
+        self.assertIn("pulse width 100; pulse-width velocity +7", output)
+        self.assertIn("LFO: rate 100, depth 100, modulation 100", output)
+        self.assertIn("Pitch envelope: depth 10, velocity 3", output)
+        self.assertIn("TVF: cutoff 100, resonance 30", output)
+        self.assertIn("bias >C7 / +7", output)
+        self.assertIn("bias 1 >A1 / -12; bias 2 <C7 / +0", output)
+
+        self.assertEqual(reports._signed(0, 24, 0, 48), "-24")
+        self.assertEqual(reports._signed(48, 24, 0, 48), "+24")
+        self.assertEqual(reports._signed(0, 50, 0, 100), "-50")
+        self.assertEqual(reports._signed(100, 50, 0, 100), "+50")
+        self.assertEqual(reports._negative(0, 12), "+0")
+        self.assertEqual(reports._negative(12, 12), "-12")
+        self.assertEqual(reports._one_based(0, 3), "1")
+        self.assertEqual(reports._one_based(3, 3), "4")
+
+        timbres = complete_image(128 * 8)
+        timbres.data[:8] = bytes((2, 0, 0, 100, 24, 3, 1, 0))
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "timbre-ranges.mid"
+            midi_from_messages(make_messages(0x05, timbres, 0x10)).save(source)
+            output = reports.timbre(source, "A-11")
+            bank_b_output = reports.timbre(source, "B-11")
+            with self.assertRaisesRegex(D20Error, "A-11 through A-88 or B-11 through B-88"):
+                reports.timbre(source, "I-11")
+        self.assertIn("Timbre A-11", output)
+        self.assertIn("Key shift: -24; fine tune: +50", output)
+        self.assertIn("Bender range: 24; assign mode: 4; reverb: ON", output)
+        self.assertIn("Timbre B-11", bank_b_output)
 
     def test_selected_report_refuses_an_incomplete_record(self) -> None:
         address, payload = (0x07, 0x00, 0x00), (0x00,)
@@ -139,6 +191,10 @@ class LocalRegressionTests(unittest.TestCase):
     def testsnd(self) -> Path:
         return Path(os.environ.get("D20_TESTSND_333", ""))
 
+    @property
+    def factory_dump(self) -> Path:
+        return Path(os.environ.get("D20_FACTORY_MID", ""))
+
     @unittest.skipUnless(os.environ.get("D20_DEMO_DUMP_MID"), "Set D20_DEMO_DUMP_MID to run this private regression test.")
     def test_demo_dump_midi_inspection_and_native_conversions(self) -> None:
         self.assertTrue(self.demo_dump.is_file(), self.demo_dump)
@@ -163,6 +219,15 @@ class LocalRegressionTests(unittest.TestCase):
             self.assertEqual(cli.main(["sound", str(self.testsnd), str(midi)]), 0)
             self.assertEqual(cli.main(["sound", str(midi), str(rebuilt), "--name", "TESTSND"]), 0)
             self.assertEqual(rebuilt.read_bytes(), self.testsnd.read_bytes())
+
+    @unittest.skipUnless(os.environ.get("D20_FACTORY_MID"), "Set D20_FACTORY_MID to validate the private factory dump.")
+    def test_factory_dump_decodes_known_tone_values(self) -> None:
+        self.assertTrue(self.factory_dump.is_file(), self.factory_dump)
+        tone_output = reports.tone(self.factory_dump, 1)
+        self.assertIn("Internal/user Tone i01: TouchPiano", tone_output)
+        self.assertIn("wave 33 (Acoustic Piano High", tone_output)
+        self.assertIn("wave 34 (Acoustic Piano Low", tone_output)
+        self.assertIn("bias 1 >C4 / -12; bias 2 <G4 / -4", tone_output)
 
 
 if __name__ == "__main__":
