@@ -27,7 +27,6 @@ def emit(message: str, *, file=None) -> None:
 def add_converter_arguments(parser: argparse.ArgumentParser, label: str) -> None:
     parser.add_argument("input", type=Path, help=f"source {label} file")
     parser.add_argument("output", type=Path, help=f"destination {label} file")
-    parser.add_argument("--name", help="1-10 character D-20 disk name for native output")
     parser.add_argument("--device-id", default="0x10", help="Roland device ID for MIDI/SysEx output (default: 0x10)")
     parser.add_argument("--force", action="store_true", help="replace an existing output")
 
@@ -99,7 +98,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         device_id = parse_device_id(args.device_id)
         converter = sound.convert if args.command == "sound" else rhythm.convert
-        emit(converter(args.input, args.output, name=args.name, device_id=device_id, force=args.force))
+        emit(converter(args.input, args.output, device_id=device_id, force=args.force))
         return 0
     except D20Error as exc:
         emit(f"Error: {exc}", file=sys.stderr)

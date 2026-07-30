@@ -203,7 +203,7 @@ class PublicConverterTests(unittest.TestCase):
             source = root / "source.333"
             midi = root / "sound.mid"
             syx = root / "sound.syx"
-            rebuilt = root / "rebuilt.333"
+            rebuilt = root / "publictest.333"
             source.write_bytes(raw)
             self.assertIn("Tone: 64 message(s)", inspect.report(source))
             with redirect_stdout(io.StringIO()):
@@ -213,7 +213,8 @@ class PublicConverterTests(unittest.TestCase):
             self.assertEqual(cli.main(["sound", str(source), str(midi)]), 0)
             self.assertEqual(cli.main(["sound", str(source), str(syx)]), 0)
             self.assertIn("Tone: 64 message(s)", inspect.report(syx))
-            self.assertEqual(cli.main(["sound", str(midi), str(rebuilt), "--name", "PUBLICTEST"]), 0)
+            self.assertEqual(cli.main(["sound", str(midi), str(rebuilt)]), 0)
+            self.assertEqual(sound.decode(rebuilt)[0], "PUBLICTEST")
             self.assertEqual(rebuilt.read_bytes(), raw)
 
     def test_native_validation_and_safe_conversion_failures(self) -> None:
@@ -241,10 +242,10 @@ class PublicConverterTests(unittest.TestCase):
             destination = root / "existing.mid"
             destination.write_bytes(b"existing")
             with self.assertRaisesRegex(D20Error, "already exists"):
-                sound.convert(source, destination, name=None, device_id=0x10, force=False)
-            self.assertIn("Converted", sound.convert(source, destination, name=None, device_id=0x10, force=True))
+                sound.convert(source, destination, device_id=0x10, force=False)
+            self.assertIn("Converted", sound.convert(source, destination, device_id=0x10, force=True))
             with self.assertRaisesRegex(D20Error, "extensions"):
-                sound.convert(source, root / "wrong.txt", name=None, device_id=0x10, force=False)
+                sound.convert(source, root / "wrong.txt", device_id=0x10, force=False)
 
             bad_rhythm_mirror = bytearray(rhythm_raw)
             bad_rhythm_mirror[rhythm.MIRROR_OFFSET] ^= 1
@@ -288,13 +289,14 @@ class PublicConverterTests(unittest.TestCase):
             root = Path(directory)
             source = root / "source.444"
             midi = root / "rhythm.mid"
-            rebuilt = root / "rebuilt.444"
+            rebuilt = root / "rhytest.444"
             source.write_bytes(raw)
             self.assertIn("Rhythm Pattern: 64 message(s)", inspect.report(source))
             with redirect_stdout(io.StringIO()):
                 self.assertEqual(cli.main(["report", "rhythm", str(source)]), 0)
             self.assertEqual(cli.main(["rhythm", str(source), str(midi)]), 0)
-            self.assertEqual(cli.main(["rhythm", str(midi), str(rebuilt), "--name", "RHYTEST"]), 0)
+            self.assertEqual(cli.main(["rhythm", str(midi), str(rebuilt)]), 0)
+            self.assertEqual(rhythm.decode(rebuilt)[0], "RHYTEST")
             self.assertEqual(rebuilt.read_bytes(), raw)
 
     def test_invalid_and_wip_commands_fail_safely(self) -> None:
@@ -317,6 +319,13 @@ class PublicConverterTests(unittest.TestCase):
             cli.main(["--help"])
         self.assertEqual(exited.exception.code, 0)
         self.assertTrue(output.getvalue().startswith("\n"))
+
+    def test_converter_help_has_no_filename_override(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output), self.assertRaises(SystemExit) as exited:
+            cli.main(["sound", "--help"])
+        self.assertEqual(exited.exception.code, 0)
+        self.assertNotIn("--name", output.getvalue())
 
 
 class LocalRegressionTests(unittest.TestCase):
@@ -346,9 +355,9 @@ class LocalRegressionTests(unittest.TestCase):
             sound_file, rhythm_file = root / "demodump.333", root / "demodump.444"
             sound_midi, rhythm_midi = root / "demodump-sound.mid", root / "demodump-rhythm.mid"
             self.assertIn("System: 1 message(s)", inspect.report(self.demo_dump))
-            self.assertEqual(cli.main(["sound", str(self.demo_dump), str(sound_file), "--name", "DEMODUMP"]), 0)
+            self.assertEqual(cli.main(["sound", str(self.demo_dump), str(sound_file)]), 0)
             self.assertEqual(cli.main(["sound", str(sound_file), str(sound_midi)]), 0)
-            self.assertEqual(cli.main(["rhythm", str(self.demo_dump), str(rhythm_file), "--name", "DEMODUMP"]), 0)
+            self.assertEqual(cli.main(["rhythm", str(self.demo_dump), str(rhythm_file)]), 0)
             self.assertEqual(cli.main(["rhythm", str(rhythm_file), str(rhythm_midi)]), 0)
             self.assertIn("Tone: 64 message(s)", inspect.report(sound_midi))
             self.assertIn("Rhythm Pattern: 64 message(s)", inspect.report(rhythm_midi))
@@ -360,7 +369,7 @@ class LocalRegressionTests(unittest.TestCase):
             root = Path(directory)
             midi, rebuilt = root / "testsnd.mid", root / "testsnd.333"
             self.assertEqual(cli.main(["sound", str(self.testsnd), str(midi)]), 0)
-            self.assertEqual(cli.main(["sound", str(midi), str(rebuilt), "--name", "TESTSND"]), 0)
+            self.assertEqual(cli.main(["sound", str(midi), str(rebuilt)]), 0)
             self.assertEqual(rebuilt.read_bytes(), self.testsnd.read_bytes())
 
     @unittest.skipUnless(os.environ.get("D20_TESTRHY_444"), "Set D20_TESTRHY_444 to run this private regression test.")
@@ -372,7 +381,7 @@ class LocalRegressionTests(unittest.TestCase):
             self.assertIn("Rhythm Pattern: 64 message(s)", inspect.report(self.testrhy))
             self.assertIn("D-20 Rhythm Setup", reports.rhythm(self.testrhy))
             self.assertEqual(cli.main(["rhythm", str(self.testrhy), str(midi)]), 0)
-            self.assertEqual(cli.main(["rhythm", str(midi), str(rebuilt), "--name", "TESTRHY"]), 0)
+            self.assertEqual(cli.main(["rhythm", str(midi), str(rebuilt)]), 0)
             self.assertEqual(rebuilt.read_bytes(), self.testrhy.read_bytes())
 
     @unittest.skipUnless(os.environ.get("D20_FACTORY_MID"), "Set D20_FACTORY_MID to validate the private factory dump.")

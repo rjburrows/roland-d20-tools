@@ -19,9 +19,9 @@ def header(name: str) -> bytes:
     try:
         encoded = name.upper().encode("ascii", "strict")
     except UnicodeEncodeError as exc:
-        raise D20Error("--name must use printable ASCII characters.") from exc
+        raise D20Error("The destination filename must use printable ASCII characters.") from exc
     if not 1 <= len(encoded) <= 10 or any(byte < 32 or byte > 126 for byte in encoded):
-        raise D20Error("--name must contain 1 to 10 printable ASCII characters.")
+        raise D20Error("The destination filename stem must contain 1 to 10 printable ASCII characters.")
     result = bytearray(HEADER_SIZE)
     result[:3] = b"\x04\x00\x00"
     result[6:16] = encoded.ljust(10, b" ")
@@ -76,7 +76,7 @@ def encode(name: str, messages: list[D20Message]) -> bytes:
     return bytes(raw)
 
 
-def convert(source: Path, destination: Path, *, name: str | None, device_id: int, force: bool) -> str:
+def convert(source: Path, destination: Path, *, device_id: int, force: bool) -> str:
     source, destination = source.expanduser(), destination.expanduser()
     input_type, output_type = source.suffix.lower(), destination.suffix.lower()
     valid = {".444", ".mid", ".midi", ".syx"}
@@ -96,7 +96,6 @@ def convert(source: Path, destination: Path, *, name: str | None, device_id: int
     if output_type != ".444":
         raise D20Error("MIDI/SysEx Rhythm input can only produce a .444 file.")
     messages = scan_syx(source) if input_type == ".syx" else scan_midi(source)
-    disk_name = name or destination.stem.upper()[:10]
+    disk_name = destination.stem.upper()[:10]
     atomic_write(destination, encode(disk_name, messages))
     return f"Converted {source.name} to {destination.name} ({disk_name.upper()}), {FILE_SIZE} bytes."
-

@@ -29,9 +29,9 @@ d20-tools report patch TESTSND.333 --patch 1 --showtones
 d20-tools report timbre TESTSND.333 --timbre A-11 --showtones
 d20-tools report tone D20BACKUP.syx --tone i01
 d20-tools sound TESTSND.333 TESTSND.mid
-d20-tools sound TESTSND.mid TESTSND.333 --name TESTSND
+d20-tools sound TESTSND.mid TESTSND.333
 d20-tools rhythm TESTRHY.444 TESTRHY.syx
-d20-tools rhythm TESTRHY.syx TESTRHY.444 --name TESTRHY
+d20-tools rhythm TESTRHY.syx TESTRHY.444
 ```
 
 Existing output files are protected. Add `--force` only when you intend to

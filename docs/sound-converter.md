@@ -6,7 +6,7 @@ reconstructs a `.333` file from a complete compatible MIDI or SysEx dump.
 
 ```sh
 d20-tools sound SOUND.333 SOUND.mid
-d20-tools sound SOUND.mid SOUND.333 --name SOUND
+d20-tools sound SOUND.mid SOUND.333
 d20-tools sound SOUND.333 SOUND.syx --device-id 0x10
 ```
 
@@ -15,9 +15,10 @@ d20-tools sound SOUND.333 SOUND.syx --device-id 0x10
 | `.333` | `.mid`, `.midi`, `.syx` |
 | `.mid`, `.midi`, `.syx` | `.333` |
 
-`--name` is required only when writing a `.333` and must be 1–10 printable
-ASCII characters. Existing output files are protected; add `--force` only to
-replace a file intentionally.
+When writing a `.333`, its embedded D-20 filename is derived from the output
+filename: it is uppercased and limited to the first 10 printable ASCII
+characters of the filename stem. Existing output files are protected; add
+`--force` only to replace a file intentionally.
 
 Example terminal result:
 

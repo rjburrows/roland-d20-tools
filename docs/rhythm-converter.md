@@ -5,7 +5,7 @@ and reconstructs a `.444` file from complete compatible MIDI/SysEx data.
 
 ```sh
 d20-tools rhythm RHYTHM.444 RHYTHM.mid
-d20-tools rhythm RHYTHM.syx RHYTHM.444 --name RHYTHM
+d20-tools rhythm RHYTHM.syx RHYTHM.444
 ```
 
 | Input | Valid output |
@@ -13,9 +13,10 @@ d20-tools rhythm RHYTHM.syx RHYTHM.444 --name RHYTHM
 | `.444` | `.mid`, `.midi`, `.syx` |
 | `.mid`, `.midi`, `.syx` | `.444` |
 
-`--name` is required only when writing a `.444` and must be 1–10 printable
-ASCII characters. Existing output files are protected; add `--force` only to
-replace a file intentionally.
+When writing a `.444`, its embedded D-20 filename is derived from the output
+filename: it is uppercased and limited to the first 10 printable ASCII
+characters of the filename stem. Existing output files are protected; add
+`--force` only to replace a file intentionally.
 
 Example terminal result:
 
