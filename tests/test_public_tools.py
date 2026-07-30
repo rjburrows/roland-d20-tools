@@ -71,12 +71,14 @@ class PublicConverterTests(unittest.TestCase):
 
     def test_pcm_wave_names_use_one_based_reference_numbers(self) -> None:
         partial = bytearray(58)
-        partial[4], partial[5] = 0, 61  # Stored 0-based index; reference Bank 1, No. 62.
-        self.assertIn("PCM bank 0, wave 62 (Acoustic Bass; stored index 61, reference Bank 1)", reports._partial(bytes(partial), 0, "P")[1])
-        partial[4], partial[5] = 1, 64  # Stored 0-based index; reference Bank 2, No. 65.
-        self.assertIn("PCM bank 1, wave 65 (Loop-35; stored index 64, reference Bank 2)", reports._partial(bytes(partial), 0, "P")[1])
-        partial[4], partial[5] = 3, 126  # Factory dump: any non-zero selector maps to PCM Bank 2.
-        self.assertIn("PCM bank 1, wave 127 (Jam-33 (Loop); stored index 126, stored selector 3, reference Bank 2)", reports._partial(bytes(partial), 0, "P")[1])
+        partial[4], partial[5] = 0, 24  # Stored 0-based index 24 is manual Bank 1, Wave 25.
+        self.assertIn("Tambourine (PCM Bank 1, Wave 25)", reports._partial(bytes(partial), 0, "P")[1])
+        partial[4], partial[5] = 0, 61
+        self.assertIn("Acoustic Bass (PCM Bank 1, Wave 62)", reports._partial(bytes(partial), 0, "P")[1])
+        partial[4], partial[5] = 1, 64
+        self.assertIn("Loop-35 (PCM Bank 2, Wave 65)", reports._partial(bytes(partial), 0, "P")[1])
+        partial[4], partial[5] = 3, 126  # Factory dump: any non-zero selector maps to manual Bank 2.
+        self.assertIn("Jam-33 (Loop) (PCM Bank 2, Wave 127)", reports._partial(bytes(partial), 0, "P")[1])
 
     def test_tone_and_timbre_manual_value_offsets(self) -> None:
         self.assertEqual(reports._bias_point(0), "<A1")
@@ -227,8 +229,8 @@ class LocalRegressionTests(unittest.TestCase):
         self.assertTrue(self.factory_dump.is_file(), self.factory_dump)
         tone_output = reports.tone(self.factory_dump, 1)
         self.assertIn("Internal/user Tone i01: TouchPiano", tone_output)
-        self.assertIn("wave 33 (Acoustic Piano High", tone_output)
-        self.assertIn("wave 34 (Acoustic Piano Low", tone_output)
+        self.assertIn("Acoustic Piano High (PCM Bank 1, Wave 33)", tone_output)
+        self.assertIn("Acoustic Piano Low (PCM Bank 1, Wave 34)", tone_output)
         self.assertIn("bias 1 >C4 / -12; bias 2 <G4 / -4", tone_output)
 
 

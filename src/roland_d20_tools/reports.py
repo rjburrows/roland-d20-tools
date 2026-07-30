@@ -151,17 +151,16 @@ def _tone_label(group: int, number: int, names: dict[int, str], *, parenthesize_
 
 
 def _pcm_wave_name(selector: int, index: int) -> str:
-    """Format PCM values against the two-bank, one-based reference chart.
+    """Format PCM values using the two-bank, one-based reference chart.
 
     Factory Tone data uses selector values 0, 2, and 3. The D-20's two PCM
-    banks are selected as 0 (Bank 1) or non-zero (Bank 2), so the raw selector
-    is retained in the display whenever it is not the canonical bank value.
+    banks are selected as 0 (manual Bank 1) or non-zero (manual Bank 2).
     """
-    bank = 0 if selector == 0 else 1
-    if not 0 <= index < len(PCM_BANKS[bank]):
-        return f"PCM bank {bank}, wave index {index} (unknown waveform; stored selector {selector})"
-    selector_note = "" if selector == bank else f", stored selector {selector}"
-    return f"PCM bank {bank}, wave {index + 1} ({PCM_BANKS[bank][index]}; stored index {index}{selector_note}, reference Bank {bank + 1})"
+    bank_index = 0 if selector == 0 else 1
+    bank_number = bank_index + 1
+    if not 0 <= index < len(PCM_BANKS[bank_index]):
+        return f"Unknown waveform (PCM Bank {bank_number}, Wave {index + 1})"
+    return f"{PCM_BANKS[bank_index][index]} (PCM Bank {bank_number}, Wave {index + 1})"
 
 
 def system(path: Path) -> str:

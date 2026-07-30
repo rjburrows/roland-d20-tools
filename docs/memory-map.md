@@ -46,11 +46,11 @@ meaningful fields within those groups.
 For a PCM (`P`) partial, wave-generator byte `4` is a bank selector and byte
 `5` is a zero-based waveform index (`0–127`). The supplied D-20 PCM reference
 labels the same data as **Bank 1** or **Bank 2**, and **No. 1–128**. Factory
-Tone data uses selectors `0`, `2`, and `3`: `0` selects PCM bank `0`
-(reference Bank 1), while any non-zero selector selects PCM bank `1`
-(reference Bank 2). The report preserves an unusual raw selector in its
-output. For example, stored selector `0`, index `61` is shown as `PCM bank 0,
-wave 62 (Acoustic Bass; stored index 61, reference Bank 1)`.
+Tone data uses selectors `0`, `2`, and `3`: `0` selects manual PCM Bank 1,
+while any non-zero selector selects manual PCM Bank 2. The report hides these
+storage details and presents the D-20 reference values directly. For example,
+stored selector `0`, index `24` is displayed as `Tambourine (PCM Bank 1, Wave
+25)`.
 
 ## Manual-checked ranges and offsets
 
