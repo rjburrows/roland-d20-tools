@@ -25,6 +25,7 @@ For development or release checks, install the optional tools and run:
 ```sh
 python -m pip install -e ".[dev]"
 make check
+make coverage
 make package
 ```
 

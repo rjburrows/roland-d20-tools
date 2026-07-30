@@ -10,10 +10,11 @@ python -m pip install -e ".[dev]"
 make check
 ```
 
-Use `make lint`, `make test`, `make check`, and `make package` after activating
-the virtual environment. Do not add private disk images or copyrighted factory
-content as fixtures. The optional local regression tests are designed for that
-purpose.
+Use `make lint`, `make test`, `make coverage`, `make check`, and `make package`
+after activating the virtual environment. Coverage is reported without a fixed
+threshold so it exposes untested branches without encouraging superficial
+tests. Do not add private disk images or copyrighted factory content as
+fixtures. The optional local regression tests are designed for that purpose.
 
 For a release, update the version in `pyproject.toml` and `CHANGELOG.md`, pass
 the local checks and CI, tag the commit, and create a GitHub Release from that

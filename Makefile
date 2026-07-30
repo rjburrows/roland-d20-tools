@@ -1,4 +1,4 @@
-.PHONY: install lint test check package clean
+.PHONY: install lint test coverage check package clean
 
 PYTHON ?= python3
 
@@ -12,7 +12,11 @@ lint:
 test:
 	$(PYTHON) -m unittest discover -s tests -v
 
-check: lint test
+coverage:
+	$(PYTHON) -m coverage run -m unittest discover -s tests -v
+	$(PYTHON) -m coverage report
+
+check: lint coverage
 
 package:
 	$(PYTHON) -m build
