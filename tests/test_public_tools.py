@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -59,8 +59,12 @@ class PublicConverterTests(unittest.TestCase):
                 output = io.StringIO()
                 with redirect_stdout(output):
                     self.assertEqual(cli.main(command), 0)
+                self.assertTrue(output.getvalue().startswith("\n"))
                 self.assertIn(expected, output.getvalue())
-            self.assertEqual(cli.main(["report", "patch", str(source), "--patch", "129"]), 2)
+            errors = io.StringIO()
+            with redirect_stderr(errors):
+                self.assertEqual(cli.main(["report", "patch", str(source), "--patch", "129"]), 2)
+            self.assertTrue(errors.getvalue().startswith("\n"))
 
     def test_internal_tone_identifier_requires_i_prefix_and_two_digits(self) -> None:
         self.assertEqual(cli.parse_internal_tone("i01"), 1)
@@ -176,12 +180,25 @@ class PublicConverterTests(unittest.TestCase):
             self.assertEqual(rebuilt.read_bytes(), raw)
 
     def test_invalid_and_wip_commands_fail_safely(self) -> None:
-        self.assertEqual(cli.main(["song"]), 2)
-        self.assertEqual(cli.main(["all"]), 2)
+        errors = io.StringIO()
+        with redirect_stderr(errors):
+            self.assertEqual(cli.main(["song"]), 2)
+            self.assertEqual(cli.main(["all"]), 2)
+        self.assertTrue(errors.getvalue().startswith("\n"))
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "not-a-midi.mid"
             path.write_bytes(b"not MIDI")
-            self.assertEqual(cli.main(["inspect", str(path)]), 2)
+            errors = io.StringIO()
+            with redirect_stderr(errors):
+                self.assertEqual(cli.main(["inspect", str(path)]), 2)
+            self.assertTrue(errors.getvalue().startswith("\n"))
+
+    def test_help_output_starts_with_a_blank_line(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output), self.assertRaises(SystemExit) as exited:
+            cli.main(["--help"])
+        self.assertEqual(exited.exception.code, 0)
+        self.assertTrue(output.getvalue().startswith("\n"))
 
 
 class LocalRegressionTests(unittest.TestCase):

@@ -10,6 +10,20 @@ from . import inspect, reports, rhythm, sound
 from .core import D20Error, parse_device_id
 
 
+class OutputParser(argparse.ArgumentParser):
+    """Keep command help and argument errors visually separate from the prompt."""
+
+    def _print_message(self, message: str | None, file=None) -> None:
+        if message:
+            super()._print_message(f"\n{message}", file)
+
+
+def emit(message: str, *, file=None) -> None:
+    """Print one command result with a leading blank line."""
+    print(file=file)
+    print(message, file=file)
+
+
 def add_converter_arguments(parser: argparse.ArgumentParser, label: str) -> None:
     parser.add_argument("input", type=Path, help=f"source {label} file")
     parser.add_argument("output", type=Path, help=f"destination {label} file")
@@ -30,7 +44,7 @@ def parse_internal_tone(value: str) -> int:
 
 
 def parser() -> argparse.ArgumentParser:
-    result = argparse.ArgumentParser(prog="d20-tools", description="Safe local SysEx inspection and file conversion for Roland D-20 data.")
+    result = OutputParser(prog="d20-tools", description="Safe local SysEx inspection and file conversion for Roland D-20 data.")
     commands = result.add_subparsers(dest="command", required=True, title="commands")
     sound_parser = commands.add_parser("sound", help="convert Sound .333 files")
     add_converter_arguments(sound_parser, "Sound (.333), MIDI, or SysEx")
@@ -64,20 +78,20 @@ def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     try:
         if args.command in {"song", "all"}:
-            print(f"The D-20 {args.command.title()} converter is a work in progress and is not available in v0.1.", file=sys.stderr)
+            emit(f"The D-20 {args.command.title()} converter is a work in progress and is not available in v0.1.", file=sys.stderr)
             return 2
         if args.command == "inspect":
-            print(inspect.report(args.input))
+            emit(inspect.report(args.input))
             return 0
         if args.command == "report":
             runner = getattr(reports, args.report)
             option = {"patch": "patch", "timbre": "timbre", "tone": "tone"}.get(args.report)
-            print(runner(args.input, getattr(args, option)) if option else runner(args.input))
+            emit(runner(args.input, getattr(args, option)) if option else runner(args.input))
             return 0
         device_id = parse_device_id(args.device_id)
         converter = sound.convert if args.command == "sound" else rhythm.convert
-        print(converter(args.input, args.output, name=args.name, device_id=device_id, force=args.force))
+        emit(converter(args.input, args.output, name=args.name, device_id=device_id, force=args.force))
         return 0
     except D20Error as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        emit(f"Error: {exc}", file=sys.stderr)
         return 2
