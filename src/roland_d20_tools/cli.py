@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 import sys
 
-from . import inspect, rhythm, sound
+from . import inspect, reports, rhythm, sound
 from .core import D20Error, parse_device_id
 
 
@@ -27,6 +27,23 @@ def parser() -> argparse.ArgumentParser:
     add_converter_arguments(rhythm_parser, "Rhythm (.444), MIDI, or SysEx")
     inspect_parser = commands.add_parser("inspect", help="summarize D-20 DT1 SysEx in a MIDI or SysEx file")
     inspect_parser.add_argument("input", type=Path, help="source .mid/.midi or raw .syx D-20 dump")
+    report_parser = commands.add_parser("report", help="decode System, Patch, Timbre, Tone, or Rhythm parameters")
+    report_commands = report_parser.add_subparsers(dest="report", required=True, title="reports")
+    for name, help_text in (
+        ("system", "decode 10H global System settings"),
+        ("patch", "decode 07H Patch records"),
+        ("timbre", "decode 05H Timbre records"),
+        ("tone", "decode 08H permanent or 04H temporary Tone records"),
+        ("rhythm", "decode 09H Rhythm Setup assignments"),
+    ):
+        report = report_commands.add_parser(name, help=help_text)
+        report.add_argument("input", type=Path, help="source .mid/.midi or raw .syx D-20 dump")
+        if name == "patch":
+            report.add_argument("--patch", type=int, metavar="1..128", help="show one complete Patch record")
+        elif name == "timbre":
+            report.add_argument("--slot", metavar="I-11..I-88 | C-11..C-88", help="show one complete Timbre slot")
+        elif name == "tone":
+            report.add_argument("--tone", type=int, metavar="1..64", help="show one complete Tone record")
     commands.add_parser("song", help="Song .222 conversion (work in progress)")
     commands.add_parser("all", help="All .111 conversion (work in progress)")
     return result
@@ -40,6 +57,11 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         if args.command == "inspect":
             print(inspect.report(args.input))
+            return 0
+        if args.command == "report":
+            runner = getattr(reports, args.report)
+            option = {"patch": "patch", "timbre": "slot", "tone": "tone"}.get(args.report)
+            print(runner(args.input, getattr(args, option)) if option else runner(args.input))
             return 0
         device_id = parse_device_id(args.device_id)
         converter = sound.convert if args.command == "sound" else rhythm.convert

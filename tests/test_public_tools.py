@@ -3,18 +3,20 @@
 from __future__ import annotations
 
 import os
+import io
 from pathlib import Path
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 import mido
 
-from roland_d20_tools import cli, inspect, rhythm, sound
-from roland_d20_tools.core import MemoryImage, make_messages, scan_messages
+from roland_d20_tools import cli, inspect, reports, rhythm, sound
+from roland_d20_tools.core import D20Error, MemoryImage, make_messages, roland_checksum, scan_messages
 
 
 def complete_image(size: int) -> MemoryImage:
@@ -32,6 +34,43 @@ def midi_from_messages(messages: list[mido.Message]) -> mido.MidiFile:
 
 
 class PublicConverterTests(unittest.TestCase):
+    def test_nested_report_commands_validate_and_decode_complete_records(self) -> None:
+        system = complete_image(50)
+        patches = complete_image(128 * 38)
+        timbres = complete_image(128 * 8)
+        tones = complete_image(64 * 256)
+        rhythm_setup = complete_image(85 * 4)
+        messages = [
+            *make_messages(0x10, system, 0x10), *make_messages(0x07, patches, 0x10),
+            *make_messages(0x05, timbres, 0x10), *make_messages(0x08, tones, 0x10),
+            *make_messages(0x09, rhythm_setup, 0x10),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "reports.mid"
+            midi_from_messages(messages).save(source)
+            cases = (
+                (["report", "system", str(source)], "Global System"),
+                (["report", "patch", str(source), "--patch", "1"], "Patch 1:"),
+                (["report", "timbre", str(source), "--slot", "I-11"], "Timbre slot I-11"),
+                (["report", "tone", str(source), "--tone", "1"], "Tone 1:"),
+                (["report", "rhythm", str(source)], "Rhythm Setup"),
+            )
+            for command, expected in cases:
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    self.assertEqual(cli.main(command), 0)
+                self.assertIn(expected, output.getvalue())
+            self.assertEqual(cli.main(["report", "patch", str(source), "--patch", "129"]), 2)
+
+    def test_selected_report_refuses_an_incomplete_record(self) -> None:
+        address, payload = (0x07, 0x00, 0x00), (0x00,)
+        message = mido.Message("sysex", data=(0x41, 0x10, 0x16, 0x12, *address, *payload, roland_checksum((*address, *payload))))
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "partial.mid"
+            midi_from_messages([message]).save(source)
+            with self.assertRaisesRegex(D20Error, "incomplete"):
+                reports.patch(source, 1)
+
     def test_sound_round_trip_and_syx_inspection(self) -> None:
         tones = complete_image(sound.TONE_COUNT * sound.TONE_SYSEX_SIZE)
         timbres = complete_image(sound.TIMBRE_COUNT * sound.TIMBRE_SIZE)
@@ -121,4 +160,3 @@ class LocalRegressionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

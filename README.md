@@ -3,8 +3,8 @@
 Safe, local inspection and conversion tools for Roland D-20 SysEx and disk
 files. Nothing is uploaded: the tools read and write files on your computer.
 
-Version 0.1 inspects standard MIDI/Raw SysEx D-20 dumps and converts Sound
-(`.333`) and Rhythm (`.444`) disk files. Song
+Version 0.1 inspects and reports on standard MIDI/Raw SysEx D-20 dumps, and
+converts Sound (`.333`) and Rhythm (`.444`) disk files. Song
 (`.222`) and All (`.111`) commands are deliberately present as work-in-progress
 placeholders; they do not modify or convert files yet.
 
@@ -23,6 +23,8 @@ python -m pip install .
 
 ```sh
 d20-tools inspect D20BACKUP.mid
+d20-tools report patch D20BACKUP.mid --patch 1
+d20-tools report tone D20BACKUP.syx --tone 1
 d20-tools sound TESTSND.333 TESTSND.mid
 d20-tools sound TESTSND.mid TESTSND.333 --name TESTSND
 d20-tools rhythm TESTRHY.444 TESTRHY.syx
@@ -34,7 +36,8 @@ replace the destination.
 
 | Command | Status | Documentation |
 | --- | --- | --- |
-| `d20-tools inspect` | Ready | [SysEx inspector](docs/sysex-inspector.md) |
+| `d20-tools inspect` | Ready — compact DT1 area summary | [SysEx inspector](docs/sysex-inspector.md) |
+| `d20-tools report` | Ready — detailed read-only diagnostic reports | [Diagnostic reports](docs/reports.md) |
 | `d20-tools sound` | Ready | [Sound converter](docs/sound-converter.md) |
 | `d20-tools rhythm` | Ready | [Rhythm converter](docs/rhythm-converter.md) |
 | `d20-tools song` | WIP placeholder | [Song WIP](docs/song-wip.md) |
@@ -55,7 +58,17 @@ flowchart LR
     I[.111 All file] --> J[d20-tools all\nWIP]
 ```
 
-See [the architecture guide](docs/architecture.md) for the module-level map.
+See [the architecture guide](docs/architecture.md) for the module-level map and
+the [memory-address reference](docs/memory-map.md) for the source-derived D-20
+address and native-file layout tables.
+
+## Inspection scope
+
+`d20-tools inspect` is deliberately brief: it validates a `.mid`, `.midi`, or
+`.syx` file and prints the number of valid DT1 messages in each recognised
+area. It writes no file. Detailed parameter reports are available through the
+nested `d20-tools report` commands for System, Patch, Timbre, Tone, and Rhythm
+Setup data. All inspection and report commands are read-only.
 
 ## Testing
 

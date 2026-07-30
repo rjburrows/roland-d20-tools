@@ -142,13 +142,63 @@ def scan_syx(path: Path) -> list[D20Message]:
 
 
 def assemble(messages: Iterable[D20Message], area: int, size: int, label: str) -> MemoryImage:
-    image = MemoryImage.create(size)
-    for message in messages:
-        if message.address[0] == area:
-            image.write(message.offset, message.payload, label)
+    image = assemble_partial(messages, area, size, label)
     if not image.complete():
         raise D20Error(f"{label} is incomplete ({image.coverage()}/{size} bytes).")
     return image
+
+
+def assemble_partial(messages: Iterable[D20Message], area: int, size: int, label: str, *, fill: int = 0) -> MemoryImage:
+    """Assemble one address area without treating absent bytes as data.
+
+    Diagnostic reports can safely show complete individual records from a
+    partial transfer. Converters continue to use :func:`assemble`, which
+    requires complete coverage before it writes a native file.
+    """
+    image = MemoryImage.create(size, fill)
+    for message in messages:
+        if message.address[0] == area:
+            image.write(message.offset, message.payload, label)
+    return image
+
+
+def load_dt1(path: Path) -> list[D20Message]:
+    """Read validated D-20 DT1 messages from a MIDI or raw SysEx file."""
+    source = path.expanduser()
+    if source.suffix.lower() == ".syx":
+        return scan_syx(source)
+    if source.suffix.lower() in {".mid", ".midi"}:
+        return scan_midi(source)
+    raise D20Error("D-20 reports accept Standard MIDI (.mid/.midi) or raw SysEx (.syx) files.")
+
+
+def printable_text(values: Iterable[int]) -> str:
+    """Return a trimmed fixed-width D-20 text field."""
+    return "".join(chr(value) if 32 <= value <= 126 else " " for value in values).strip()
+
+
+def note_name(note: int, *, d20_octaves: bool = False) -> str:
+    """Format a MIDI note using standard or D-20 octave numbering."""
+    if not 0 <= note <= 127:
+        return f"Invalid({note})"
+    names = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+    return f"{names[note % 12]}{note // 12 + (1 if d20_octaves else -1)}"
+
+
+def user_tone_names(messages: Iterable[D20Message]) -> dict[int, str]:
+    """Read names from complete permanent tones, falling back to temporary."""
+    message_list = list(messages)
+    for area in (0x08, 0x04):
+        image = assemble_partial(message_list, area, 64 * 256, "Tone data")
+        names = {
+            index: printable_text(image.data[index * 256 : index * 256 + 10])
+            for index in range(64)
+            if image.complete(index * 256, 10)
+            and printable_text(image.data[index * 256 : index * 256 + 10])
+        }
+        if names:
+            return names
+    return {}
 
 
 def make_messages(area: int, image: MemoryImage, device_id: int) -> list[mido.Message]:
@@ -189,4 +239,3 @@ def parse_device_id(value: str) -> int:
     if not 0 <= device_id <= 0x7F:
         raise D20Error("--device-id must be in 0..127.")
     return device_id
-
