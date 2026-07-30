@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import Counter
 from pathlib import Path
 
-from .core import D20Error, load_dt1
+from .core import D20Error, load_report_messages
 
 
 LABELS = {
@@ -23,7 +23,7 @@ LABELS = {
 
 def report(path: Path) -> str:
     source = path.expanduser()
-    messages = load_dt1(source)
+    messages = load_report_messages(source)
     if not messages:
         raise D20Error("No valid Roland D-20 DT1 messages were found.")
     blocks = Counter(message.address[0] for message in messages)

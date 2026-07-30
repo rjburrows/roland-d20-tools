@@ -17,3 +17,6 @@ fixtures. The optional local regression tests are designed for that purpose.
 For a release, update the version in `pyproject.toml`, pass CI, tag the commit,
 and create a GitHub Release from that tag.
 
+GitHub Actions runs the public suite on supported Python versions and performs
+a wheel-install smoke test. Run the optional private fixture checks locally
+before a release when you have the original files available.

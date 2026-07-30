@@ -3,8 +3,8 @@
 Safe, local inspection and conversion tools for Roland D-20 SysEx and disk
 files. Nothing is uploaded: the tools read and write files on your computer.
 
-Version 0.1 inspects and reports on standard MIDI/Raw SysEx D-20 dumps, and
-converts Sound (`.333`) and Rhythm (`.444`) disk files. Song
+Version 0.1 inspects and reports on standard MIDI, Raw SysEx, Sound (`.333`),
+and Rhythm (`.444`) D-20 files, and converts Sound and Rhythm disk files. Song
 (`.222`) and All (`.111`) commands are deliberately present as work-in-progress
 placeholders; they do not modify or convert files yet.
 
@@ -23,7 +23,10 @@ python -m pip install .
 
 ```sh
 d20-tools inspect D20BACKUP.mid
+d20-tools inspect TESTSND.333
 d20-tools report patch D20BACKUP.mid --patch 1
+d20-tools report patch TESTSND.333 --patch 1 --showtones
+d20-tools report timbre TESTSND.333 --timbre A-11 --showtones
 d20-tools report tone D20BACKUP.syx --tone i01
 d20-tools sound TESTSND.333 TESTSND.mid
 d20-tools sound TESTSND.mid TESTSND.333 --name TESTSND
@@ -47,9 +50,11 @@ replace the destination.
 
 ```mermaid
 flowchart LR
-    K[.mid / .syx SysEx dump] --> L[d20-tools inspect]
+    K[.mid / .syx SysEx dump] --> L[d20-tools inspect / report]
     A[.333 Sound file] <--> B[d20-tools sound]
     C[.444 Rhythm file] <--> D[d20-tools rhythm]
+    A --> L
+    C --> L
     B <--> E[Standard MIDI .mid]
     B <--> F[Raw SysEx .syx]
     D <--> E
@@ -64,11 +69,12 @@ address and native-file layout tables.
 
 ## Inspection scope
 
-`d20-tools inspect` is deliberately brief: it validates a `.mid`, `.midi`, or
-`.syx` file and prints the number of valid DT1 messages in each recognised
-area. It writes no file. Detailed parameter reports are available through the
-nested `d20-tools report` commands for System, Patch, Timbre, Tone, and Rhythm
-Setup data. All inspection and report commands are read-only.
+`d20-tools inspect` is deliberately brief: it validates a `.333`, `.444`,
+`.mid`, `.midi`, or `.syx` file and prints the number of valid DT1-equivalent
+messages in each recognised area. It writes no file. Detailed parameter reports
+are available through the nested `d20-tools report` commands for System, Patch,
+Timbre, Tone, and Rhythm Setup data. All inspection and report commands are
+read-only.
 
 ## Testing
 
@@ -77,12 +83,13 @@ python -m unittest discover -s tests -v
 ```
 
 The public tests use generated fixtures. Optional local regression tests use
-your own `DemoDump.mid` and `TESTSND.333` without copying either file into the
-repository:
+your own D-20 files without copying them into the repository:
 
 ```sh
 D20_DEMO_DUMP_MID=/path/to/DemoDump.mid \
 D20_TESTSND_333=/path/to/TESTSND.333 \
+D20_TESTRHY_444=/path/to/TESTRHY.444 \
+D20_FACTORY_MID=/path/to/D1020ORIG.MID \
 python -m unittest discover -s tests -v
 ```
 

@@ -14,12 +14,18 @@ d20-tools report REPORT INPUT [REPORT-OPTION]
 
 `REPORT` is one of the following.
 
+| Input file | Reports available directly |
+| --- | --- |
+| `.mid`, `.midi`, `.syx` | Any report whose required memory area is present. |
+| `.333` Sound | `patch`, `timbre`, and `tone` (including `--showtones`). |
+| `.444` Rhythm | `rhythm`. |
+
 | Command | Input and optional parameter | Terminal output |
 | --- | --- | --- |
 | `report system INPUT` | No extra option. Requires complete 50-byte area `10H`. | Master tune, global reverb, part reserves/levels/pans, and stored MIDI channels. |
 | `report patch INPUT` | `--patch 1..128` is optional; `--showtones` may follow a selected Patch. Requires area `07H`; the selected record must be complete. | Without `--patch`, a populated-patch index. With it, layout, split, both tone assignments, tuning, bender, assign and reverb values. `--showtones` appends both assigned editable Tone configurations. |
 | `report timbre INPUT` | `--timbre A-11..A-88` or `--timbre B-11..B-88` is optional; `--showtones` may follow a selected Timbre. Requires area `05H`. | Without `--timbre`, a 128-Timbre index. With it, the complete tone assignment and performance values for that Timbre. `--showtones` appends its assigned editable Tone configuration. |
-| `report tone INPUT` | `--tone i01..i64` is optional. Uses permanent `08H`, falling back to temporary `04H`. | Without `--tone`, complete internal/user Tone names. With it, structure, partial activity, wave generator, LFO, TVF and TVA values. |
+| `report tone INPUT` | `--tone i01..i64` is optional. Uses permanent `08H`, falling back to temporary `04H`. | Without `--tone`, complete internal/user Tone names. With it, structure, partial activity, wave generator, LFO, and complete Pitch/TVF/TVA envelope values. |
 | `report rhythm INPUT` | No extra option. Requires complete 340-byte area `09H`. | Assigned Rhythm Setup keys (C1–C8), tone, level, pan and reverb. |
 
 Examples:
@@ -80,8 +86,8 @@ for the byte offsets and complete range table.
 
 ## Example output
 
-These shortened examples are from `DemoDump.mid`. Actual names and values will
-reflect the dump being inspected. Long reports continue for every complete
+These are shortened, representative terminal results. Actual names and values
+reflect the file being inspected. Long reports continue for every complete
 record or assigned rhythm key.
 
 ### System
@@ -120,6 +126,24 @@ Key shift: +0; fine tune: +0
 Bender range: 2; assign mode: 1; reverb: ON
 ```
 
+### Patch with underlying Tones
+
+```text
+Patch 1: Warm Pad Fade
+...
+
+Underlying Tone configuration
+
+Lower Tone: i17 Warm Pad
+
+Internal/user Tone i17: Warm Pad (address 08H)
+Structure 1/2: 1 (S-S (Mix)); structure 3/4: 8 (S-S (Ring))
+...
+
+Upper Tone: i17 Warm Pad
+...
+```
+
 ### One Tone
 
 ```text
@@ -131,9 +155,14 @@ Partial 1 [P]: ACTIVE
   Wave generator: pitch C3, fine +2, key follow s2, bender ON
   Wave: Acoustic Piano High (PCM Bank 1, Wave 33); pulse width 0; pulse-width velocity +0
   LFO: rate 0, depth 0, modulation 0
-  Pitch envelope: depth 1, velocity 0, time key follow 4; times [0, 43, 69, 100]
+  Pitch envelope: depth 1, velocity 0, time key follow 4
+    Times T1–T4: [0, 43, 69, 100]; levels L0/L1/L2/Sustain/End: [+0, +0, +0, +0, +0]
   TVF: cutoff 0, resonance 0, key follow 3/8, bias <A1 / +0
+  TVF envelope: depth 100, velocity 0, depth key follow 0, time key follow 0
+    Times T1–T5: [0, 0, 0, 0, 100]; levels L1/L2/L3/Sustain: [+3, -50, -11, -11]
   TVA: level 100, velocity +45; bias 1 >C4 / -12; bias 2 <G4 / -4
+  TVA envelope: time-1 velocity follow 0, time key follow 0
+    Times T1–T5: [22, 10, 100, 0, 81]; levels L1/L2/L3/Sustain: [75, 98, 100, 100]
 ```
 
 ### Rhythm Setup

@@ -66,12 +66,15 @@ values, and exercised against the factory `D1020ORIG.MID` dump.
 | Tone WG coarse / fine | partial `0` / `1` | `0–96` → `C1…C9` / `0–100` → `−50…+50` |
 | Tone pulse-width / velocity | partial `6` / `7` | `0–100` / `0–14` → `0…100` / `−7…+7` |
 | Tone pitch envelope depth / velocity | partial `8` / `9` | `0–10` / `0–3` |
+| Tone pitch envelope time / level | partial `11–14` / `15–19` | `0–100` / `0–100` → `−50…+50` |
 | Tone LFO and cutoff | partial `20–23` | each `0–100` |
 | Tone resonance | partial `24` | `0–30` |
 | Tone TVF Bias Level | partial `27` | `0–14` → `−7…+7` |
 | Tone TVF / TVA Bias Point | partial `26` / `43,45` | `0–63` = `<A1…<C7`; `64–127` = `>A1…>C7` |
+| Tone TVF envelope | partial `28–29`, `30–31`, `32–36`, `37–40` | depth/velocity/times `0–100`; depth/time key follow `0–4`; levels `0–100` → `−50…+50` |
 | Tone TVA Bias Level | partial `44,46` | `0–12` → `0…−12` |
 | Tone TVA level / velocity | partial `41` / `42` | `0–100` / `0–100` → `−50…+50` |
+| Tone TVA envelope | partial `47–48`, `49–53`, `54–57` | velocity/time key follow `0–4`; times and levels `0–100` |
 
 When a displayed bounded field contains an out-of-range stored value, the
 report says `Invalid(...; expected ...)` instead of silently converting it.

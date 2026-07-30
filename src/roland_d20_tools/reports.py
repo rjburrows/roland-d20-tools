@@ -105,6 +105,11 @@ def _one_based(value: int, maximum: int) -> str:
     return str(value + 1)
 
 
+def _series(values: bytes, formatter) -> str:
+    """Format a compact parameter series without concealing invalid values."""
+    return "[" + ", ".join(formatter(value) for value in values) + "]"
+
+
 def _bias_point(value: int) -> str:
     """Decode the D-20's 7-bit, directional bias-point representation.
 
@@ -257,14 +262,21 @@ def timbre(path: Path, selection: str | None = None, *, showtones: bool = False)
 
 def _partial(data: bytes, offset: int, source: str) -> list[str]:
     value = lambda index: data[offset + index]
+    raw_100 = lambda item: _raw(item, 0, 100)
+    signed_50 = lambda item: _signed(item, 50, 0, 100)
     waveform = ("Saw" if value(4) else "Square") if source == "S" else _pcm_wave_name(value(4), value(5))
     return [
         f"  Wave generator: pitch {note_name(value(0), d20_octaves=True) if value(0) <= 96 else _raw(value(0), 0, 96)}, fine {_signed(value(1), 50, 0, 100)}, key follow {_value(WG_KF, value(2))}, bender {'ON' if value(3) == 1 else 'OFF' if value(3) == 0 else _raw(value(3), 0, 1)}",
         f"  Wave: {waveform}; pulse width {_raw(value(6), 0, 100)}; pulse-width velocity {_signed(value(7), 7, 0, 14)}",
         f"  LFO: rate {_raw(value(20), 0, 100)}, depth {_raw(value(21), 0, 100)}, modulation {_raw(value(22), 0, 100)}",
-        f"  Pitch envelope: depth {_raw(value(8), 0, 10)}, velocity {_raw(value(9), 0, 3)}, time key follow {_value(TKF, value(10))}; times {[int(_raw(item, 0, 100)) if 0 <= item <= 100 else _raw(item, 0, 100) for item in data[offset + 11:offset + 15]]}",
+        f"  Pitch envelope: depth {_raw(value(8), 0, 10)}, velocity {_raw(value(9), 0, 3)}, time key follow {_value(TKF, value(10))}",
+        f"    Times T1–T4: {_series(data[offset + 11:offset + 15], raw_100)}; levels L0/L1/L2/Sustain/End: {_series(data[offset + 15:offset + 20], signed_50)}",
         f"  TVF: cutoff {_raw(value(23), 0, 100)}, resonance {_raw(value(24), 0, 30)}, key follow {_value(TVF_KF, value(25))}, bias {_bias_point(value(26))} / {_signed(value(27), 7, 0, 14)}",
+        f"  TVF envelope: depth {_raw(value(28), 0, 100)}, velocity {_raw(value(29), 0, 100)}, depth key follow {_value(TKF, value(30))}, time key follow {_value(TKF, value(31))}",
+        f"    Times T1–T5: {_series(data[offset + 32:offset + 37], raw_100)}; levels L1/L2/L3/Sustain: {_series(data[offset + 37:offset + 41], signed_50)}",
         f"  TVA: level {_raw(value(41), 0, 100)}, velocity {_signed(value(42), 50, 0, 100)}; bias 1 {_bias_point(value(43))} / {_negative(value(44), 12)}; bias 2 {_bias_point(value(45))} / {_negative(value(46), 12)}",
+        f"  TVA envelope: time-1 velocity follow {_value(TKF, value(47))}, time key follow {_value(TKF, value(48))}",
+        f"    Times T1–T5: {_series(data[offset + 49:offset + 54], raw_100)}; levels L1/L2/L3/Sustain: {_series(data[offset + 54:offset + 58], raw_100)}",
     ]
 
 

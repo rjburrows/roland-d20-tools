@@ -81,6 +81,8 @@ class PublicConverterTests(unittest.TestCase):
         self.assertIn("Acoustic Bass (PCM Bank 1, Wave 62)", reports._partial(bytes(partial), 0, "P")[1])
         partial[4], partial[5] = 1, 64
         self.assertIn("Loop-35 (PCM Bank 2, Wave 65)", reports._partial(bytes(partial), 0, "P")[1])
+        partial[4], partial[5] = 2, 64  # Another selector value used by the factory dump.
+        self.assertIn("Loop-35 (PCM Bank 2, Wave 65)", reports._partial(bytes(partial), 0, "P")[1])
         partial[4], partial[5] = 3, 126  # Factory dump: any non-zero selector maps to manual Bank 2.
         self.assertIn("Jam-33 (Loop) (PCM Bank 2, Wave 127)", reports._partial(bytes(partial), 0, "P")[1])
 
@@ -94,15 +96,23 @@ class PublicConverterTests(unittest.TestCase):
         partial[0], partial[1], partial[6], partial[7] = 96, 100, 100, 14
         partial[8], partial[9], partial[20], partial[21], partial[22] = 10, 3, 100, 100, 100
         partial[23], partial[24], partial[26], partial[27] = 100, 30, 127, 14
+        partial[15:20] = bytes((0, 25, 50, 75, 100))
+        partial[28:41] = bytes((100, 100, 4, 4, 0, 25, 50, 75, 100, 0, 25, 50, 100))
         partial[41], partial[42], partial[43], partial[44], partial[45], partial[46] = 100, 0, 64, 12, 63, 0
+        partial[47:58] = bytes((4, 4, 0, 25, 50, 75, 100, 0, 25, 50, 100))
         output = "\n".join(reports._partial(bytes(partial), 0, "S"))
         self.assertIn("pitch C9, fine +50", output)
         self.assertIn("pulse width 100; pulse-width velocity +7", output)
         self.assertIn("LFO: rate 100, depth 100, modulation 100", output)
         self.assertIn("Pitch envelope: depth 10, velocity 3", output)
+        self.assertIn("levels L0/L1/L2/Sustain/End: [-50, -25, +0, +25, +50]", output)
         self.assertIn("TVF: cutoff 100, resonance 30", output)
+        self.assertIn("TVF envelope: depth 100, velocity 100, depth key follow 4, time key follow 4", output)
+        self.assertIn("levels L1/L2/L3/Sustain: [-50, -25, +0, +50]", output)
         self.assertIn("bias >C7 / +7", output)
         self.assertIn("bias 1 >A1 / -12; bias 2 <C7 / +0", output)
+        self.assertIn("TVA envelope: time-1 velocity follow 4, time key follow 4", output)
+        self.assertIn("levels L1/L2/L3/Sustain: [0, 25, 50, 100]", output)
 
         self.assertEqual(reports._signed(0, 24, 0, 48), "-24")
         self.assertEqual(reports._signed(48, 24, 0, 48), "+24")
@@ -157,6 +167,20 @@ class PublicConverterTests(unittest.TestCase):
         self.assertIn("Internal/user Tone i02: TONE TWO", patch_output)
         self.assertIn("Underlying Tone configuration", command_output.getvalue())
 
+    def test_showtones_explains_fixed_and_missing_tone_data(self) -> None:
+        timbres = complete_image(128 * 8)
+        timbres.data[:2] = bytes((0, 0))
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "fixed-tone.mid"
+            midi_from_messages(make_messages(0x05, timbres, 0x10)).save(source)
+            fixed_output = reports.timbre(source, "A-11", showtones=True)
+            timbres.data[:2] = bytes((2, 0))
+            source = Path(directory) / "missing-tone.mid"
+            midi_from_messages(make_messages(0x05, timbres, 0x10)).save(source)
+            missing_output = reports.timbre(source, "A-11", showtones=True)
+        self.assertIn("fixed Preset A ROM Tone", fixed_output)
+        self.assertIn("Tone configuration unavailable: No Tone data", missing_output)
+
     def test_selected_report_refuses_an_incomplete_record(self) -> None:
         address, payload = (0x07, 0x00, 0x00), (0x00,)
         message = mido.Message("sysex", data=(0x41, 0x10, 0x16, 0x12, *address, *payload, roland_checksum((*address, *payload))))
@@ -170,6 +194,8 @@ class PublicConverterTests(unittest.TestCase):
         tones = complete_image(sound.TONE_COUNT * sound.TONE_SYSEX_SIZE)
         timbres = complete_image(sound.TIMBRE_COUNT * sound.TIMBRE_SIZE)
         patches = complete_image(sound.PATCH_COUNT * sound.PATCH_SIZE)
+        tones.data[:10] = b"NATIVE TNE"
+        timbres.data[:2] = bytes((2, 0))
         messages = [*make_messages(0x05, timbres, 0x10), *make_messages(0x07, patches, 0x10), *make_messages(0x08, tones, 0x10)]
         raw = sound.encode("PUBLICTEST", scan_messages(messages))
         with tempfile.TemporaryDirectory() as directory:
@@ -179,14 +205,72 @@ class PublicConverterTests(unittest.TestCase):
             syx = root / "sound.syx"
             rebuilt = root / "rebuilt.333"
             source.write_bytes(raw)
+            self.assertIn("Tone: 64 message(s)", inspect.report(source))
             with redirect_stdout(io.StringIO()):
                 self.assertEqual(cli.main(["report", "tone", str(source), "--tone", "i01"]), 0)
                 self.assertEqual(cli.main(["report", "timbre", str(source), "--timbre", "A-11"]), 0)
+                self.assertEqual(cli.main(["report", "timbre", str(source), "--timbre", "A-11", "--showtones"]), 0)
             self.assertEqual(cli.main(["sound", str(source), str(midi)]), 0)
             self.assertEqual(cli.main(["sound", str(source), str(syx)]), 0)
             self.assertIn("Tone: 64 message(s)", inspect.report(syx))
             self.assertEqual(cli.main(["sound", str(midi), str(rebuilt), "--name", "PUBLICTEST"]), 0)
             self.assertEqual(rebuilt.read_bytes(), raw)
+
+    def test_native_validation_and_safe_conversion_failures(self) -> None:
+        tones = complete_image(sound.TONE_COUNT * sound.TONE_SYSEX_SIZE)
+        timbres = complete_image(sound.TIMBRE_COUNT * sound.TIMBRE_SIZE)
+        patches = complete_image(sound.PATCH_COUNT * sound.PATCH_SIZE)
+        sound_raw = sound.encode("SAFE", scan_messages([*make_messages(0x05, timbres, 0x10), *make_messages(0x07, patches, 0x10), *make_messages(0x08, tones, 0x10)]))
+        setup = complete_image(rhythm.SETUP_SIZE)
+        pattern = complete_image(rhythm.PATTERN_SIZE)
+        track = complete_image(rhythm.TRACK_SIZE)
+        sequencer = complete_image(rhythm.SEQUENCER_SIZE)
+        rhythm_raw = rhythm.encode("SAFE", scan_messages([*make_messages(0x09, setup, 0x10), *make_messages(0x0A, pattern, 0x10), *make_messages(0x0B, track, 0x10), *make_messages(0x0C, sequencer, 0x10)]))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source.333"
+            source.write_bytes(sound_raw)
+            bad_header = root / "bad-header.333"
+            bad_header.write_bytes(b"\x00" + sound_raw[1:])
+            bad_mirror = bytearray(sound_raw)
+            bad_mirror[sound.PATCH_MIRROR_OFFSET] ^= 1
+            bad_mirror_path = root / "bad-mirror.333"
+            bad_mirror_path.write_bytes(bad_mirror)
+            self.assertRaises(D20Error, sound.decode, bad_header)
+            self.assertRaises(D20Error, sound.decode, bad_mirror_path)
+            destination = root / "existing.mid"
+            destination.write_bytes(b"existing")
+            with self.assertRaisesRegex(D20Error, "already exists"):
+                sound.convert(source, destination, name=None, device_id=0x10, force=False)
+            self.assertIn("Converted", sound.convert(source, destination, name=None, device_id=0x10, force=True))
+            with self.assertRaisesRegex(D20Error, "extensions"):
+                sound.convert(source, root / "wrong.txt", name=None, device_id=0x10, force=False)
+
+            bad_rhythm_mirror = bytearray(rhythm_raw)
+            bad_rhythm_mirror[rhythm.MIRROR_OFFSET] ^= 1
+            bad_rhythm_path = root / "bad-mirror.444"
+            bad_rhythm_path.write_bytes(bad_rhythm_mirror)
+            with self.assertRaisesRegex(D20Error, "mirror"):
+                rhythm.decode(bad_rhythm_path)
+
+        tones.data[246] = 1
+        lossy_messages = scan_messages([*make_messages(0x05, timbres, 0x10), *make_messages(0x07, patches, 0x10), *make_messages(0x08, tones, 0x10)])
+        with self.assertRaisesRegex(D20Error, "cannot represent"):
+            sound.encode("LOSSY", lossy_messages)
+
+    def test_malformed_dt1_is_rejected(self) -> None:
+        address, payload = (0x08, 0x00, 0x00), (0x01,)
+        bad_checksum = (roland_checksum((*address, *payload)) + 1) & 0x7F
+        message = mido.Message("sysex", data=(0x41, 0x10, 0x16, 0x12, *address, *payload, bad_checksum))
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "bad.mid"
+            midi_from_messages([message]).save(source)
+            with self.assertRaisesRegex(D20Error, "malformed"):
+                inspect.report(source)
+            truncated = Path(directory) / "truncated.syx"
+            truncated.write_bytes(b"\xF0\x41\x10\x16\x12")
+            with self.assertRaisesRegex(D20Error, "Unterminated"):
+                inspect.report(truncated)
 
     def test_rhythm_round_trip(self) -> None:
         setup = complete_image(rhythm.SETUP_SIZE)
@@ -206,6 +290,7 @@ class PublicConverterTests(unittest.TestCase):
             midi = root / "rhythm.mid"
             rebuilt = root / "rebuilt.444"
             source.write_bytes(raw)
+            self.assertIn("Rhythm Pattern: 64 message(s)", inspect.report(source))
             with redirect_stdout(io.StringIO()):
                 self.assertEqual(cli.main(["report", "rhythm", str(source)]), 0)
             self.assertEqual(cli.main(["rhythm", str(source), str(midi)]), 0)
@@ -246,6 +331,10 @@ class LocalRegressionTests(unittest.TestCase):
         return Path(os.environ.get("D20_TESTSND_333", ""))
 
     @property
+    def testrhy(self) -> Path:
+        return Path(os.environ.get("D20_TESTRHY_444", ""))
+
+    @property
     def factory_dump(self) -> Path:
         return Path(os.environ.get("D20_FACTORY_MID", ""))
 
@@ -274,6 +363,18 @@ class LocalRegressionTests(unittest.TestCase):
             self.assertEqual(cli.main(["sound", str(midi), str(rebuilt), "--name", "TESTSND"]), 0)
             self.assertEqual(rebuilt.read_bytes(), self.testsnd.read_bytes())
 
+    @unittest.skipUnless(os.environ.get("D20_TESTRHY_444"), "Set D20_TESTRHY_444 to run this private regression test.")
+    def test_testrhy_444_round_trip_is_byte_identical(self) -> None:
+        self.assertTrue(self.testrhy.is_file(), self.testrhy)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            midi, rebuilt = root / "testrhy.mid", root / "testrhy.444"
+            self.assertIn("Rhythm Pattern: 64 message(s)", inspect.report(self.testrhy))
+            self.assertIn("D-20 Rhythm Setup", reports.rhythm(self.testrhy))
+            self.assertEqual(cli.main(["rhythm", str(self.testrhy), str(midi)]), 0)
+            self.assertEqual(cli.main(["rhythm", str(midi), str(rebuilt), "--name", "TESTRHY"]), 0)
+            self.assertEqual(rebuilt.read_bytes(), self.testrhy.read_bytes())
+
     @unittest.skipUnless(os.environ.get("D20_FACTORY_MID"), "Set D20_FACTORY_MID to validate the private factory dump.")
     def test_factory_dump_decodes_known_tone_values(self) -> None:
         self.assertTrue(self.factory_dump.is_file(), self.factory_dump)
@@ -282,6 +383,8 @@ class LocalRegressionTests(unittest.TestCase):
         self.assertIn("Acoustic Piano High (PCM Bank 1, Wave 33)", tone_output)
         self.assertIn("Acoustic Piano Low (PCM Bank 1, Wave 34)", tone_output)
         self.assertIn("bias 1 >C4 / -12; bias 2 <G4 / -4", tone_output)
+        self.assertIn("TVF envelope:", tone_output)
+        self.assertIn("TVA envelope:", tone_output)
 
 
 if __name__ == "__main__":
