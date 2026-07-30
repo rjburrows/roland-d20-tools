@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import io
 import json
+from importlib.metadata import version
 from pathlib import Path
 import sys
 import tempfile
@@ -16,7 +17,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 import mido
 
-from roland_d20_tools import cli, finder, inspect, reports, rhythm, sound
+from roland_d20_tools import __version__, cli, finder, inspect, reports, rhythm, sound
 from roland_d20_tools.core import D20Error, MemoryImage, make_messages, roland_checksum, scan_messages
 
 
@@ -437,6 +438,9 @@ class PublicConverterTests(unittest.TestCase):
         self.assertIn("D-20 Tools doctor", doctor_output.getvalue())
         self.assertIn("Version: 0.1.0", doctor_output.getvalue())
         self.assertIn("Live MIDI input/output: not included", doctor_output.getvalue())
+
+    def test_version_is_sourced_from_package_metadata(self) -> None:
+        self.assertEqual(__version__, version("roland-d20-tools"))
 
     def test_converter_help_has_no_filename_override(self) -> None:
         output = io.StringIO()

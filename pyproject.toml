@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "roland-d20-tools"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Safe local inspection, reporting, and conversion for Roland D-20 MIDI, SysEx, Sound, and Rhythm data"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -34,6 +34,9 @@ d20-tools = "roland_d20_tools.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.dynamic]
+version = {attr = "roland_d20_tools.__version__"}
+
 [tool.ruff]
 target-version = "py310"
 
@@ -48,5 +51,6 @@ branch = true
 source = ["roland_d20_tools"]
 
 [tool.coverage.report]
+fail_under = 90
 show_missing = true
 skip_covered = true
