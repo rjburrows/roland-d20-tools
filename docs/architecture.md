@@ -15,7 +15,7 @@ flowchart TD
     Core --> Syx[Raw SysEx .syx]
     Tests[Unit and regression tests] --> CLI
     Tests --> Core
-    Local[Optional local fixtures\nAwkward.mid + TESTSND.333] --> Tests
+    Local[Optional local fixtures\nDemoDump.mid + TESTSND.333] --> Tests
 ```
 
 `core.py` owns file safety, DT1 checksum validation, address-aware assembly,

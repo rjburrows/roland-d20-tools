@@ -125,24 +125,24 @@ class LocalRegressionTests(unittest.TestCase):
     """Run only when private local fixtures are explicitly supplied."""
 
     @property
-    def awkward(self) -> Path:
-        return Path(os.environ.get("D20_AWKWARD_MID", ""))
+    def demo_dump(self) -> Path:
+        return Path(os.environ.get("D20_DEMO_DUMP_MID", ""))
 
     @property
     def testsnd(self) -> Path:
         return Path(os.environ.get("D20_TESTSND_333", ""))
 
-    @unittest.skipUnless(os.environ.get("D20_AWKWARD_MID"), "Set D20_AWKWARD_MID to run this private regression test.")
-    def test_awkward_midi_inspection_and_native_conversions(self) -> None:
-        self.assertTrue(self.awkward.is_file(), self.awkward)
+    @unittest.skipUnless(os.environ.get("D20_DEMO_DUMP_MID"), "Set D20_DEMO_DUMP_MID to run this private regression test.")
+    def test_demo_dump_midi_inspection_and_native_conversions(self) -> None:
+        self.assertTrue(self.demo_dump.is_file(), self.demo_dump)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            sound_file, rhythm_file = root / "awkward.333", root / "awkward.444"
-            sound_midi, rhythm_midi = root / "awkward-sound.mid", root / "awkward-rhythm.mid"
-            self.assertIn("System: 1 message(s)", inspect.report(self.awkward))
-            self.assertEqual(cli.main(["sound", str(self.awkward), str(sound_file), "--name", "AWKWARD"]), 0)
+            sound_file, rhythm_file = root / "demodump.333", root / "demodump.444"
+            sound_midi, rhythm_midi = root / "demodump-sound.mid", root / "demodump-rhythm.mid"
+            self.assertIn("System: 1 message(s)", inspect.report(self.demo_dump))
+            self.assertEqual(cli.main(["sound", str(self.demo_dump), str(sound_file), "--name", "DEMODUMP"]), 0)
             self.assertEqual(cli.main(["sound", str(sound_file), str(sound_midi)]), 0)
-            self.assertEqual(cli.main(["rhythm", str(self.awkward), str(rhythm_file), "--name", "AWKWARD"]), 0)
+            self.assertEqual(cli.main(["rhythm", str(self.demo_dump), str(rhythm_file), "--name", "DEMODUMP"]), 0)
             self.assertEqual(cli.main(["rhythm", str(rhythm_file), str(rhythm_midi)]), 0)
             self.assertIn("Tone: 64 message(s)", inspect.report(sound_midi))
             self.assertIn("Rhythm Pattern: 64 message(s)", inspect.report(rhythm_midi))

@@ -36,7 +36,7 @@ to paste the command shown by `d20-tools report REPORT --help`.
 
 ## Example output
 
-These shortened examples are from `Awkward.mid`. Actual names and values will
+These shortened examples are from `DemoDump.mid`. Actual names and values will
 reflect the dump being inspected. Long reports continue for every complete
 record or assigned rhythm key.
 

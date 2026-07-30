@@ -77,11 +77,11 @@ python -m unittest discover -s tests -v
 ```
 
 The public tests use generated fixtures. Optional local regression tests use
-your own `Awkward.mid` and `TESTSND.333` without copying either file into the
+your own `DemoDump.mid` and `TESTSND.333` without copying either file into the
 repository:
 
 ```sh
-D20_AWKWARD_MID=/path/to/Awkward.mid \
+D20_DEMO_DUMP_MID=/path/to/DemoDump.mid \
 D20_TESTSND_333=/path/to/TESTSND.333 \
 python -m unittest discover -s tests -v
 ```
