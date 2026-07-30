@@ -327,6 +327,30 @@ class PublicConverterTests(unittest.TestCase):
         self.assertEqual(exited.exception.code, 0)
         self.assertNotIn("--name", output.getvalue())
 
+    def test_every_command_help_includes_an_example(self) -> None:
+        commands = (
+            (),
+            ("sound",),
+            ("rhythm",),
+            ("inspect",),
+            ("report",),
+            ("report", "system"),
+            ("report", "patch"),
+            ("report", "timbre"),
+            ("report", "tone"),
+            ("report", "rhythm"),
+            ("song",),
+            ("all",),
+        )
+        for command in commands:
+            with self.subTest(command=command):
+                output = io.StringIO()
+                with redirect_stdout(output), self.assertRaises(SystemExit) as exited:
+                    cli.main([*command, "--help"])
+                self.assertEqual(exited.exception.code, 0)
+                self.assertIn("Examples:", output.getvalue())
+                self.assertIn("d20-tools", output.getvalue())
+
 
 class LocalRegressionTests(unittest.TestCase):
     """Run only when private local fixtures are explicitly supplied."""
