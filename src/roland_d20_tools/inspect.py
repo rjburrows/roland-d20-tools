@@ -28,6 +28,7 @@ LABELS = {
     0x0C: "Sequencer Header",
     0x10: "System",
 }
+COMPLETE_ALL_AREAS = frozenset((0x05, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x10))
 
 
 def _disk_name(raw: bytes, source: Path) -> str:
@@ -121,8 +122,10 @@ def _native_detail(kind: str) -> str:
 
 
 def _classify_blocks(blocks: Counter[int]) -> tuple[str, str]:
+    if COMPLETE_ALL_AREAS <= blocks.keys():
+        return "ALL_DUMP", "Every complete-backup memory area, including System, is present."
     if 0x10 in blocks:
-        return "ALL", "The System area is present."
+        return "SYSTEM_DUMP", "The System area is present, but this is not a complete All MIDI/SysEx dump."
     sound = any(area in blocks for area in (0x04, 0x05, 0x07, 0x08))
     rhythm = any(area in blocks for area in (0x09, 0x0A, 0x0B, 0x0C))
     if sound and rhythm:
@@ -135,6 +138,12 @@ def _classify_blocks(blocks: Counter[int]) -> tuple[str, str]:
 
 
 def _declaration(kind: str) -> str:
+    if kind == "ALL_DISK":
+        return "This is an ALL (DISK) file."
+    if kind == "ALL_DUMP":
+        return "This is an ALL (MIDI DUMP) file."
+    if kind == "SYSTEM_DUMP":
+        return "This is a System-inclusive MIDI/SysEx dump."
     return f"This is {'an' if kind == 'ALL' else 'a'} {kind} file."
 
 
@@ -156,6 +165,13 @@ def report(path: Path) -> str:
     lines = [f"D-20 DT1 inspection: {source.name}", f"Valid messages: {len(messages)}"]
     for area, count in sorted(blocks.items()):
         lines.append(f"  {area:02X}H  {LABELS.get(area, 'Unknown')}: {count} message(s)")
-    kind, detail = (native[0], _native_detail(native[0])) if native else _classify_blocks(blocks)
+    if native:
+        kind, _ = native
+        if kind == "ALL":
+            kind, detail = "ALL_DISK", _native_detail("ALL")
+        else:
+            detail = _native_detail(kind)
+    else:
+        kind, detail = _classify_blocks(blocks)
     lines.extend(("", detail, _declaration(kind)))
     return "\n".join(lines)

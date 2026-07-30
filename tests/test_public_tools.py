@@ -40,10 +40,14 @@ class PublicConverterTests(unittest.TestCase):
         timbres = complete_image(128 * 8)
         tones = complete_image(64 * 256)
         rhythm_setup = complete_image(85 * 4)
+        rhythm_pattern = complete_image(16_384)
+        rhythm_track = complete_image(2_432)
+        sequencer_header = complete_image(502)
         messages = [
             *make_messages(0x10, system, 0x10), *make_messages(0x07, patches, 0x10),
             *make_messages(0x05, timbres, 0x10), *make_messages(0x08, tones, 0x10),
-            *make_messages(0x09, rhythm_setup, 0x10),
+            *make_messages(0x09, rhythm_setup, 0x10), *make_messages(0x0A, rhythm_pattern, 0x10),
+            *make_messages(0x0B, rhythm_track, 0x10), *make_messages(0x0C, sequencer_header, 0x10),
         ]
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "reports.mid"
@@ -66,7 +70,7 @@ class PublicConverterTests(unittest.TestCase):
             with redirect_stdout(inspection):
                 self.assertEqual(cli.main(["inspect", str(source)]), 0)
             self.assertTrue(inspection.getvalue().endswith("\n\n"))
-            self.assertIn("This is an ALL file.", inspection.getvalue())
+            self.assertIn("This is an ALL (MIDI DUMP) file.", inspection.getvalue())
             rhythm_output = reports.rhythm(source)
             self.assertIn("i01 User Tone", rhythm_output)
             self.assertNotIn("i01 (User Tone)", rhythm_output)
@@ -265,7 +269,7 @@ class PublicConverterTests(unittest.TestCase):
             self.assertIn("Valid messages: 165", all_output)
             self.assertIn("08H  Tone: 64 message(s)", all_output)
             self.assertNotIn("10H  System", all_output)
-            self.assertTrue(all_output.endswith("This is an ALL file."))
+            self.assertTrue(all_output.endswith("This is an ALL (DISK) file."))
 
     def test_native_validation_and_safe_conversion_failures(self) -> None:
         tones = complete_image(sound.TONE_COUNT * sound.TONE_SYSEX_SIZE)

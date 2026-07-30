@@ -15,10 +15,12 @@ d20-tools inspect TESTALL.111
 ```
 
 `INPUT` is the only parameter. The command creates no output file and writes
-its report to the terminal. A successful report ends with an explicit `ALL`,
-`SOUND`, `RHYTHM`, `MIXED`, or `UNKNOWN` declaration. A native Song file ends
-with `This is a SONG file.` Song recognition uses its fixed size, native type
-byte, and embedded Rhythm section marker—not its `.222` filename extension.
+its report to the terminal. A successful report ends with an explicit type
+declaration. It distinguishes `ALL (MIDI DUMP)`—a complete transfer containing
+the System area—from `ALL (DISK)`—a native `.111` disk container without that
+separate System area. A native Song file ends with `This is a SONG file.` Song
+recognition uses its fixed size, native type byte, and embedded Rhythm section
+marker—not its `.222` filename extension.
 
 For a MIDI, SysEx, Sound, or Rhythm input, the report also contains the source
 filename, total number of valid DT1 messages, and a count for every area found,
