@@ -1,5 +1,19 @@
 # Roland D-20 Tools
 
+## Origins and thanks
+
+This project grew out of a [VCFed forum discussion about decoding the
+mysterious Roland D-20 floppy format](https://forum.vcfed.org/index.php?threads/roland-d-20-decoding-the-mysterious-floppy-format.1243226/).
+
+Special thanks to [David Given](https://github.com/davidgiven) and
+[FluxEngine](https://github.com/davidgiven/fluxengine), which makes it possible
+to read and write data on D-20 floppy disks.
+
+And a heartfelt thanks and eternal gratitude to
+[Trond Larsen](https://github.com/trondl909) for keeping the project alive when
+it felt like I might be the only person in the world who still cared about the
+mysterious ways of the D-20.
+
 Safe, local inspection and conversion tools for Roland D-20 SysEx and disk
 files. Nothing is uploaded: the tools read and write files on your computer.
 
