@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 import sys
 
-from . import inspect, reports, rhythm, sound
+from . import finder, inspect, reports, rhythm, sound
 from .core import D20Error, parse_device_id
 
 
@@ -84,6 +84,16 @@ def parser() -> argparse.ArgumentParser:
         epilog=examples("d20-tools inspect D20BACKUP.mid", "d20-tools inspect TESTSONG.222"),
     )
     inspect_parser.add_argument("input", type=Path, help="source MIDI, SysEx, or native D-20 file")
+    find_parser = commands.add_parser(
+        "find",
+        help="recursively find named Patches, Timbres, or Tones",
+        description="Search supported D-20 MIDI, SysEx, Sound, and All files below a directory for named Patches, Timbres, and Tones. By default, matches are case-insensitive literal substrings.",
+        epilog=examples("d20-tools find ~/D20-library \"Star Synth\""),
+    )
+    find_parser.add_argument("directory", type=Path, help="folder to search recursively")
+    find_parser.add_argument("query", help="Patch, Timbre, or Tone name to find")
+    find_parser.add_argument("--type", dest="match_type", choices=("all", "patch", "timbre", "tone"), default="all", help="limit matches to one kind (default: all)")
+    find_parser.add_argument("--exact", action="store_true", help="require an exact case-insensitive name match")
     report_parser = commands.add_parser(
         "report",
         help="decode System, Patch, Timbre, Tone, or Rhythm parameters",
@@ -136,6 +146,9 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         if args.command == "inspect":
             emit(inspect.report(args.input))
+            return 0
+        if args.command == "find":
+            emit(finder.search(args.directory, args.query, match_type=args.match_type, exact=args.exact))
             return 0
         if args.command == "report":
             runner = getattr(reports, args.report)

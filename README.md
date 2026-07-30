@@ -25,6 +25,7 @@ python -m pip install .
 ```sh
 d20-tools inspect D20BACKUP.mid
 d20-tools inspect TESTSND.333
+d20-tools find ~/D20-library "Star Synth"
 d20-tools report patch D20BACKUP.mid --patch 1
 d20-tools report patch TESTSND.333 --patch 1 --showtones
 d20-tools report timbre TESTSND.333 --timbre A-11 --showtones
@@ -41,6 +42,7 @@ replace the destination.
 | Command | Status | Documentation |
 | --- | --- | --- |
 | `d20-tools inspect` | Ready — compact DT1 area summary | [SysEx inspector](docs/sysex-inspector.md) |
+| `d20-tools find` | Ready — recursive named-sound search | [Sound finder](docs/sound-finder.md) |
 | `d20-tools report` | Ready — detailed read-only diagnostic reports | [Diagnostic reports](docs/reports.md) |
 | `d20-tools sound` | Ready | [Sound converter](docs/sound-converter.md) |
 | `d20-tools rhythm` | Ready | [Rhythm converter](docs/rhythm-converter.md) |
@@ -52,9 +54,11 @@ replace the destination.
 ```mermaid
 flowchart LR
     K[.mid / .syx SysEx dump] --> L[d20-tools inspect / report]
+    K --> M[d20-tools find]
     A[.333 Sound file] <--> B[d20-tools sound]
     C[.444 Rhythm file] <--> D[d20-tools rhythm]
     A --> L
+    A --> M
     C --> L
     B <--> E[Standard MIDI .mid]
     B <--> F[Raw SysEx .syx]
@@ -62,6 +66,7 @@ flowchart LR
     D <--> F
     G[.222 Song file] --> H[d20-tools song\nWIP]
     I[.111 All file] --> J[d20-tools all\nWIP]
+    I --> M
 ```
 
 See [the architecture guide](docs/architecture.md) for the module-level map and

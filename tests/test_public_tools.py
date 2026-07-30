@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 import mido
 
-from roland_d20_tools import cli, inspect, reports, rhythm, sound
+from roland_d20_tools import cli, finder, inspect, reports, rhythm, sound
 from roland_d20_tools.core import D20Error, MemoryImage, make_messages, roland_checksum, scan_messages
 
 
@@ -98,6 +98,35 @@ class PublicConverterTests(unittest.TestCase):
         self.assertIn("i01  FIRST TONE", output)
         self.assertIn("i02  SECOND TNE", output)
         self.assertNotIn("1    FIRST TONE", output)
+
+    def test_find_recursively_matches_tone_timbre_and_patch_names(self) -> None:
+        tones = complete_image(64 * 256)
+        timbres = complete_image(128 * 8)
+        patches = complete_image(128 * 38)
+        tones.data[16 * 256 : 16 * 256 + 10] = b"StarSynth "
+        timbres.data[:8] = bytes((2, 16, 24, 50, 2, 0, 1, 0))
+        patches.data[2:6] = bytes((2, 16, 2, 16))
+        patches.data[21:37] = b"Night Pad       "
+        messages = [
+            *make_messages(0x05, timbres, 0x10),
+            *make_messages(0x07, patches, 0x10),
+            *make_messages(0x08, tones, 0x10),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "nested" / "library.mid"
+            source.parent.mkdir()
+            midi_from_messages(messages).save(source)
+            output = finder.search(root, "starsynth", match_type="all", exact=False)
+            exact = finder.search(root, "StarSynth", match_type="tone", exact=True)
+            no_match = finder.search(root, "star", match_type="tone", exact=True)
+        self.assertIn(str(source.resolve()), output)
+        self.assertIn("Tone i17: StarSynth", output)
+        self.assertIn("Timbre A-11: i17 StarSynth", output)
+        self.assertIn("Patch 1: Night Pad — i17 StarSynth / i17 StarSynth", output)
+        self.assertIn("found 3 match(es) in 1 file(s)", output)
+        self.assertIn("Tone i17: StarSynth", exact)
+        self.assertIn("found 0 match(es) in 0 file(s)", no_match)
 
     def test_pcm_wave_names_use_one_based_reference_numbers(self) -> None:
         partial = bytearray(58)
@@ -389,6 +418,7 @@ class PublicConverterTests(unittest.TestCase):
             ("sound",),
             ("rhythm",),
             ("inspect",),
+            ("find",),
             ("report",),
             ("report", "system"),
             ("report", "patch"),
