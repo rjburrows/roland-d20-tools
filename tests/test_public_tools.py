@@ -83,6 +83,18 @@ class PublicConverterTests(unittest.TestCase):
             with self.assertRaises(Exception):
                 cli.parse_internal_tone(invalid)
 
+    def test_tone_name_list_uses_internal_identifiers(self) -> None:
+        tones = complete_image(64 * 256)
+        tones.data[:10] = b"FIRST TONE"
+        tones.data[256:266] = b"SECOND TNE"
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "tones.mid"
+            midi_from_messages(make_messages(0x08, tones, 0x10)).save(source)
+            output = reports.tone(source)
+        self.assertIn("i01  FIRST TONE", output)
+        self.assertIn("i02  SECOND TNE", output)
+        self.assertNotIn("1    FIRST TONE", output)
+
     def test_pcm_wave_names_use_one_based_reference_numbers(self) -> None:
         partial = bytearray(58)
         partial[4], partial[5] = 0, 24  # Stored 0-based index 24 is manual Bank 1, Wave 25.

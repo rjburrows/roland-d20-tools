@@ -293,7 +293,7 @@ def _tone_report(messages, number: int | None = None) -> str:
             if image.complete(start, 10):
                 name = printable_text(image.data[start : start + 10])
                 if name:
-                    lines.append(f"{index + 1:<4} {name}")
+                    lines.append(f"i{index + 1:02d}  {name}")
         return "\n".join(lines + (["(No complete named tone records.)"] if len(lines) == 2 else []))
     if not 1 <= number <= 64:
         raise D20Error("--tone must be in the range 1..64.")

@@ -66,7 +66,8 @@ inventing a configuration.
 
 The Tone report exposes only editable internal/user Tones: `i01` through
 `i64`, held in permanent area `08H` (or temporary working area `04H` when a
-dump has no permanent Tone area). It does **not** decode Preset A or Preset B
+dump has no permanent Tone area). Its name-list output uses the same `i01`
+through `i64` identifiers. It does **not** decode Preset A or Preset B
 Tones. Those are fixed D-20 ROM elements rather than user data in a DT1 dump.
 They may appear by name in Patch, Timbre, or Rhythm reports when an editable
 record refers to one.
