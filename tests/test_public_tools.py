@@ -250,7 +250,10 @@ class PublicConverterTests(unittest.TestCase):
             song_path = root / "not-a-song.bin"
             song_path.write_bytes(song)
             self.assertEqual(inspect.native_type(song_path), ("SONG", "UNIT SONG"))
-            self.assertTrue(inspect.report(song_path).endswith("This is a SONG file."))
+            song_output = inspect.report(song_path)
+            self.assertIn("Valid messages: 78", song_output)
+            self.assertIn("0AH  Rhythm Pattern: 64 message(s)", song_output)
+            self.assertTrue(song_output.endswith("This is a SONG file."))
 
             all_file = bytearray(inspect.ALL_FILE_SIZE)
             all_file[2], all_file[0x10] = 0x03, 0x01
@@ -258,7 +261,11 @@ class PublicConverterTests(unittest.TestCase):
             all_path = root / "not-an-all.bin"
             all_path.write_bytes(all_file)
             self.assertEqual(inspect.native_type(all_path), ("ALL", "UNIT ALL"))
-            self.assertTrue(inspect.report(all_path).endswith("This is an ALL file."))
+            all_output = inspect.report(all_path)
+            self.assertIn("Valid messages: 165", all_output)
+            self.assertIn("08H  Tone: 64 message(s)", all_output)
+            self.assertNotIn("10H  System", all_output)
+            self.assertTrue(all_output.endswith("This is an ALL file."))
 
     def test_native_validation_and_safe_conversion_failures(self) -> None:
         tones = complete_image(sound.TONE_COUNT * sound.TONE_SYSEX_SIZE)

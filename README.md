@@ -75,9 +75,11 @@ address and native-file layout tables.
 messages in each recognised area. It also identifies native `.222` Song and
 `.111` All containers from their structure rather than their filename
 extension. Every inspection ends with an explicit file-type declaration. It
-writes no file. Detailed parameter reports are available through the nested
-`d20-tools report` commands for System, Patch, Timbre, Tone, and Rhythm Setup
-data. All inspection and report commands are read-only.
+writes no file. Native Song and All inputs also expand their embedded Rhythm
+or Sound/Rhythm data into the same concise area summary. Detailed parameter
+reports are available through the nested `d20-tools report` commands for
+System, Patch, Timbre, Tone, and Rhythm Setup data. All inspection and report
+commands are read-only.
 
 ## Testing
 

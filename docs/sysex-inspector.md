@@ -23,8 +23,12 @@ byte, and embedded Rhythm section marker—not its `.222` filename extension.
 For a MIDI, SysEx, Sound, or Rhythm input, the report also contains the source
 filename, total number of valid DT1 messages, and a count for every area found,
 such as `05H Timbre`, `07H Patch`, `08H Tone`, `09H Rhythm Setup`, and `10H
-System`. Native All and Song containers are identified but are not yet decoded
-or converted.
+System`. Native All and Song containers are expanded to the same DT1-equivalent
+area summary where their layouts contain those areas; they are not converted or
+available to the detailed parameter reports yet. A native Song contains its
+embedded Rhythm areas (78 message equivalents). A native All contains embedded
+Sound and Rhythm areas (165 message equivalents); its disk layout does not
+contain a separate `10H` System area.
 
 It is useful whether the dump came from MIDI Data Transfer or was produced by
 one of the file converters. It never changes the input file. It is not a

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import Counter
 from pathlib import Path
 
-from .core import D20Error, make_messages, read_file, scan_messages, scan_midi, scan_syx
+from .core import D20Error, MemoryImage, make_messages, read_file, scan_messages, scan_midi, scan_syx
 
 
 SOUND_FILE_SIZE = 24_576
@@ -13,6 +13,8 @@ RHYTHM_FILE_SIZE = 12_288
 SONG_FILE_SIZE = 27_648
 ALL_FILE_SIZE = 49_152
 SONG_EMBEDDED_RHYTHM_OFFSET = 0x3B00
+ALL_SOUND_OFFSET = 0x3B00
+ALL_RHYTHM_OFFSET = 0x9000
 
 
 LABELS = {
@@ -60,19 +62,62 @@ def native_type(path: Path) -> tuple[str, str] | None:
     return None
 
 
-def _native_messages(kind: str, path: Path):
-    """Expand validated Sound/Rhythm containers to their DT1-equivalent data."""
+def _sound_messages(raw: bytes, offset: int) -> list:
+    """Expand a Sound data region stored without its disk header/mirror."""
+    from . import sound
+
+    tones = MemoryImage.create(sound.TONE_COUNT * sound.TONE_SYSEX_SIZE)
+    for index in range(sound.TONE_COUNT):
+        start = offset + index * sound.TONE_DISK_SIZE
+        tones.write(index * sound.TONE_SYSEX_SIZE, raw[start : start + sound.TONE_DISK_SIZE] + b"\x00" * 10, "embedded Sound Tone memory")
+    timbres = MemoryImage.create(sound.TIMBRE_COUNT * sound.TIMBRE_SIZE)
+    timbres.write(0, raw[offset + sound.TIMBRE_OFFSET - sound.HEADER_SIZE : offset + sound.PATCH_OFFSET - sound.HEADER_SIZE], "embedded Sound Timbre memory")
+    patches = MemoryImage.create(sound.PATCH_COUNT * sound.PATCH_SIZE)
+    patches.write(0, raw[offset + sound.PATCH_OFFSET - sound.HEADER_SIZE : offset + sound.PATCH_MIRROR_OFFSET - sound.HEADER_SIZE], "embedded Sound Patch memory")
+    return scan_messages([*make_messages(0x05, timbres, 0x10), *make_messages(0x07, patches, 0x10), *make_messages(0x08, tones, 0x10)])
+
+
+def _rhythm_messages(raw: bytes, offset: int) -> list:
+    """Expand a Rhythm data region stored without its disk header."""
+    from . import rhythm
+
+    relative = lambda native_offset: offset + native_offset - rhythm.HEADER_SIZE
+    mirror = raw[relative(rhythm.MIRROR_OFFSET) : relative(rhythm.MIRROR_OFFSET) + rhythm.MIRROR_SIZE]
+    expected = raw[relative(rhythm.MIRROR_SOURCE) : relative(rhythm.MIRROR_SOURCE) + rhythm.MIRROR_SIZE]
+    if mirror != expected:
+        raise D20Error("The embedded Rhythm mirror region does not match its source data.")
+    pattern = MemoryImage.create(rhythm.PATTERN_SIZE)
+    pattern.write(0, rhythm.unpack_nibbles(raw[relative(rhythm.PATTERN_OFFSET) : relative(rhythm.PATTERN_OFFSET) + rhythm.PATTERN_SIZE // 2]), "embedded Rhythm Pattern memory")
+    track = MemoryImage.create(rhythm.TRACK_SIZE)
+    track.write(0, rhythm.unpack_nibbles(raw[relative(rhythm.TRACK_OFFSET) : relative(rhythm.TRACK_OFFSET) + rhythm.TRACK_SIZE // 2]), "embedded Rhythm Track")
+    sequencer = MemoryImage.create(rhythm.SEQUENCER_SIZE)
+    sequencer.write(0, raw[relative(rhythm.SEQUENCER_OFFSET) : relative(rhythm.SEQUENCER_OFFSET) + rhythm.SEQUENCER_SIZE], "embedded Rhythm Sequencer Header")
+    setup = MemoryImage.create(rhythm.SETUP_SIZE)
+    setup.write(0, raw[relative(rhythm.SETUP_OFFSET) : relative(rhythm.SETUP_OFFSET) + rhythm.SETUP_SIZE], "embedded Rhythm Setup")
+    return scan_messages([*make_messages(0x09, setup, 0x10), *make_messages(0x0A, pattern, 0x10), *make_messages(0x0B, track, 0x10), *make_messages(0x0C, sequencer, 0x10)])
+
+
+def _native_messages(kind: str, path: Path) -> list:
+    """Expand native container data into validated DT1-equivalent messages."""
+    source = path.expanduser()
+    raw = read_file(source)
     if kind == "SOUND":
-        from . import sound
-
-        _, tones, timbres, patches = sound.decode(path)
-        return scan_messages([*make_messages(0x05, timbres, 0x10), *make_messages(0x07, patches, 0x10), *make_messages(0x08, tones, 0x10)])
+        return _sound_messages(raw, 0x100)
     if kind == "RHYTHM":
-        from . import rhythm
+        return _rhythm_messages(raw, 0x100)
+    if kind == "SONG":
+        return _rhythm_messages(raw, SONG_EMBEDDED_RHYTHM_OFFSET)
+    if kind == "ALL":
+        return [*_sound_messages(raw, ALL_SOUND_OFFSET), *_rhythm_messages(raw, ALL_RHYTHM_OFFSET)]
+    raise ValueError(f"Unsupported native type: {kind}")
 
-        _, setup, pattern, track, sequencer = rhythm.decode(path)
-        return scan_messages([*make_messages(0x09, setup, 0x10), *make_messages(0x0A, pattern, 0x10), *make_messages(0x0B, track, 0x10), *make_messages(0x0C, sequencer, 0x10)])
-    return []
+
+def _native_detail(kind: str) -> str:
+    if kind == "SONG":
+        return "Embedded Rhythm data was expanded; real-time Song events have no DT1-memory equivalent."
+    if kind == "ALL":
+        return "Embedded Sound and Rhythm data were expanded; System settings are not stored as a DT1 area in this disk container."
+    return f"Native {kind.title()} data was expanded to DT1-equivalent messages."
 
 
 def _classify_blocks(blocks: Counter[int]) -> tuple[str, str]:
@@ -96,17 +141,6 @@ def _declaration(kind: str) -> str:
 def report(path: Path) -> str:
     source = path.expanduser()
     native = native_type(source)
-    if native and native[0] in {"SONG", "ALL"}:
-        kind, name = native
-        return "\n".join(
-            (
-                f"D-20 native inspection: {source.name}",
-                f"Stored D-20 name: {name}",
-                "Native file structure validated from its contents.",
-                "",
-                _declaration(kind),
-            )
-        )
     if native:
         kind, _ = native
         messages = _native_messages(kind, source)
@@ -122,6 +156,6 @@ def report(path: Path) -> str:
     lines = [f"D-20 DT1 inspection: {source.name}", f"Valid messages: {len(messages)}"]
     for area, count in sorted(blocks.items()):
         lines.append(f"  {area:02X}H  {LABELS.get(area, 'Unknown')}: {count} message(s)")
-    kind, detail = _classify_blocks(blocks)
+    kind, detail = (native[0], _native_detail(native[0])) if native else _classify_blocks(blocks)
     lines.extend(("", detail, _declaration(kind)))
     return "\n".join(lines)
