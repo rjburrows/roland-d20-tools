@@ -115,16 +115,19 @@ class PublicConverterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "nested" / "library.mid"
+            native_source = root / "native.333"
             source.parent.mkdir()
             midi_from_messages(messages).save(source)
+            native_source.write_bytes(sound.encode("NATIVE", scan_messages(messages)))
             output = finder.search(root, "starsynth", match_type="all", exact=False)
             exact = finder.search(root, "StarSynth", match_type="tone", exact=True)
             no_match = finder.search(root, "star", match_type="tone", exact=True)
         self.assertIn(str(source.resolve()), output)
+        self.assertIn(str(native_source.resolve()), output)
         self.assertIn("Tone i17: StarSynth", output)
         self.assertIn("Timbre A-11: i17 StarSynth", output)
         self.assertIn("Patch 1: Night Pad — i17 StarSynth / i17 StarSynth", output)
-        self.assertIn("found 3 match(es) in 1 file(s)", output)
+        self.assertIn("found 6 match(es) in 2 file(s)", output)
         self.assertIn("Tone i17: StarSynth", exact)
         self.assertIn("found 0 match(es) in 0 file(s)", no_match)
 
@@ -291,7 +294,8 @@ class PublicConverterTests(unittest.TestCase):
             all_file = bytearray(inspect.ALL_FILE_SIZE)
             all_file[2], all_file[0x10] = 0x03, 0x01
             all_file[6:16] = b"UNIT ALL  "
-            all_path = root / "not-an-all.bin"
+            all_file[inspect.ALL_SOUND_OFFSET : inspect.ALL_SOUND_OFFSET + 10] = b"ALL FINDER"
+            all_path = root / "not-an-all.111"
             all_path.write_bytes(all_file)
             self.assertEqual(inspect.native_type(all_path), ("ALL", "UNIT ALL"))
             all_output = inspect.report(all_path)
@@ -299,6 +303,9 @@ class PublicConverterTests(unittest.TestCase):
             self.assertIn("08H  Tone: 64 message(s)", all_output)
             self.assertNotIn("10H  System", all_output)
             self.assertTrue(all_output.endswith("This is an ALL (DISK) file."))
+            finder_output = finder.search(root, "all finder", match_type="tone", exact=True)
+            self.assertIn(str(all_path.resolve()), finder_output)
+            self.assertIn("Tone i01: ALL FINDER", finder_output)
 
     def test_native_validation_and_safe_conversion_failures(self) -> None:
         tones = complete_image(sound.TONE_COUNT * sound.TONE_SYSEX_SIZE)
@@ -355,6 +362,10 @@ class PublicConverterTests(unittest.TestCase):
             truncated.write_bytes(b"\xF0\x41\x10\x16\x12")
             with self.assertRaisesRegex(D20Error, "Unterminated"):
                 inspect.report(truncated)
+            finder_output = finder.search(Path(directory), "anything", match_type="all", exact=False)
+        self.assertIn("Skipped 2 unsupported or incomplete D-20 file(s).", finder_output)
+        with self.assertRaisesRegex(D20Error, "Search directory does not exist"):
+            finder.search(Path("/path/that/does/not/exist"), "anything", match_type="all", exact=False)
 
     def test_rhythm_round_trip(self) -> None:
         setup = complete_image(rhythm.SETUP_SIZE)

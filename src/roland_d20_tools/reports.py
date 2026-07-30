@@ -261,9 +261,15 @@ def timbre(path: Path, selection: str | None = None, *, showtones: bool = False)
 
 
 def _partial(data: bytes, offset: int, source: str) -> list[str]:
-    value = lambda index: data[offset + index]
-    raw_100 = lambda item: _raw(item, 0, 100)
-    signed_50 = lambda item: _signed(item, 50, 0, 100)
+    def value(index: int) -> int:
+        return data[offset + index]
+
+    def raw_100(item: int) -> str:
+        return _raw(item, 0, 100)
+
+    def signed_50(item: int) -> str:
+        return _signed(item, 50, 0, 100)
+
     waveform = ("Saw" if value(4) else "Square") if source == "S" else _pcm_wave_name(value(4), value(5))
     return [
         f"  Wave generator: pitch {note_name(value(0), d20_octaves=True) if value(0) <= 96 else _raw(value(0), 0, 96)}, fine {_signed(value(1), 50, 0, 100)}, key follow {_value(WG_KF, value(2))}, bender {'ON' if value(3) == 1 else 'OFF' if value(3) == 0 else _raw(value(3), 0, 1)}",

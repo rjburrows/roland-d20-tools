@@ -1,0 +1,34 @@
+name: Bug report
+description: Report an incorrect result, failure, or unsafe behaviour.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not attach private MIDI/SysEx dumps, disk images, or personal data."
+  - type: input
+    id: version
+    attributes:
+      label: D-20 Tools version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command used
+      placeholder: "d20-tools inspect example.mid"
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true

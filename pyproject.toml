@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "roland-d20-tools"
 version = "0.1.0"
-description = "Safe converters for Roland D-20 Sound and Rhythm disk files"
+description = "Safe local inspection, reporting, and conversion for Roland D-20 MIDI, SysEx, Sound, and Rhythm data"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [{name = "Roland D-20 Tools contributors"}]
-keywords = ["roland", "d-20", "midi", "sysex", "floppy"]
+keywords = ["roland", "d-20", "midi", "sysex", "synthesizer", "sound-design"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
@@ -21,6 +21,9 @@ classifiers = [
 ]
 dependencies = ["mido>=1.3,<2"]
 
+[project.optional-dependencies]
+dev = ["build>=1.2,<2", "ruff>=0.6,<1"]
+
 [project.urls]
 Homepage = "https://github.com/rjburrows/roland-d20-tools"
 Issues = "https://github.com/rjburrows/roland-d20-tools/issues"
@@ -30,3 +33,12 @@ d20-tools = "roland_d20_tools.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["E402"]

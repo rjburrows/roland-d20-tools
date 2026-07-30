@@ -20,6 +20,14 @@ python -m pip install --upgrade pip
 python -m pip install .
 ```
 
+For development or release checks, install the optional tools and run:
+
+```sh
+python -m pip install -e ".[dev]"
+make check
+make package
+```
+
 ## Commands
 
 ```sh
@@ -113,3 +121,9 @@ validate their D-20 container layouts and Roland DT1 checksums before writing.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Releases and security
+
+See [the changelog](CHANGELOG.md) for version history, [the contribution and
+release guide](docs/contributing.md) for local and CI checks, and
+[SECURITY.md](SECURITY.md) for responsible vulnerability reporting.

@@ -55,7 +55,7 @@ def parse_internal_tone(value: str) -> int:
 def parser() -> argparse.ArgumentParser:
     result = OutputParser(
         prog="d20-tools",
-        description="Safe local inspection, reporting, and file conversion for Roland D-20 SysEx data. Nothing is uploaded.",
+        description="Safe local inspection, reporting, and file conversion for Roland D-20 MIDI, SysEx, and native data. Nothing is uploaded.",
         epilog=examples(
             "d20-tools inspect D20BACKUP.mid",
             "d20-tools report tone D20BACKUP.mid --tone i01",

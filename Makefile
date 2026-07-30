@@ -1,16 +1,21 @@
-.PHONY: install test package clean
+.PHONY: install lint test check package clean
+
+PYTHON ?= python3
 
 install:
-	python3 -m pip install --upgrade pip
-	python3 -m pip install -e .
+	$(PYTHON) -m pip install --upgrade pip
+	$(PYTHON) -m pip install -e ".[dev]"
+
+lint:
+	$(PYTHON) -m ruff check .
 
 test:
-	python3 -m unittest discover -s tests -v
+	$(PYTHON) -m unittest discover -s tests -v
+
+check: lint test
 
 package:
-	python3 -m pip install --upgrade build
-	python3 -m build
+	$(PYTHON) -m build
 
 clean:
 	rm -rf build dist *.egg-info src/*.egg-info
-

@@ -82,7 +82,8 @@ def _rhythm_messages(raw: bytes, offset: int) -> list:
     """Expand a Rhythm data region stored without its disk header."""
     from . import rhythm
 
-    relative = lambda native_offset: offset + native_offset - rhythm.HEADER_SIZE
+    def relative(native_offset: int) -> int:
+        return offset + native_offset - rhythm.HEADER_SIZE
     mirror = raw[relative(rhythm.MIRROR_OFFSET) : relative(rhythm.MIRROR_OFFSET) + rhythm.MIRROR_SIZE]
     expected = raw[relative(rhythm.MIRROR_SOURCE) : relative(rhythm.MIRROR_SOURCE) + rhythm.MIRROR_SIZE]
     if mirror != expected:

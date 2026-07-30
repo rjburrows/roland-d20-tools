@@ -1,0 +1,17 @@
+name: Feature request
+description: Suggest a focused improvement to D-20 Tools.
+title: "feature: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour or command
+    validations:
+      required: true
