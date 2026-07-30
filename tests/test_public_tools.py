@@ -51,7 +51,7 @@ class PublicConverterTests(unittest.TestCase):
             cases = (
                 (["report", "system", str(source)], "Global System"),
                 (["report", "patch", str(source), "--patch", "1"], "Patch 1:"),
-                (["report", "timbre", str(source), "--slot", "I-11"], "Timbre slot I-11"),
+                (["report", "timbre", str(source), "--timbre", "I-11"], "Timbre slot I-11"),
                 (["report", "tone", str(source), "--tone", "1"], "Tone 1:"),
                 (["report", "rhythm", str(source)], "Rhythm Setup"),
             )

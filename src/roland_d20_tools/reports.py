@@ -129,11 +129,11 @@ def _slot(index: int) -> str:
     return f"{bank}-{item // 8 + 1}{item % 8 + 1}"
 
 
-def timbre(path: Path, slot: str | None = None) -> str:
+def timbre(path: Path, selection: str | None = None) -> str:
     messages = _load(path)
     image = _area(messages, 0x05, 128 * 8, "Timbre data")
     names = user_tone_names(messages)
-    if slot is None:
+    if selection is None:
         lines = ["Slot   Source      Tone"]
         for index in range(128):
             start = index * 8
@@ -142,10 +142,10 @@ def timbre(path: Path, slot: str | None = None) -> str:
                 source = ("Preset A", "Preset B", "User", "Rhythm")[group] if group < 4 else "Unknown"
                 lines.append(f"{_slot(index):<6} {source:<11} {_tone_label(group, number, names)}")
         return "\n".join(lines)
-    target = slot.upper().strip()
+    target = selection.upper().strip()
     choices = {_slot(index): index for index in range(128)}
     if target not in choices:
-        raise D20Error("--slot must be I-11 through I-88 or C-11 through C-88.")
+        raise D20Error("--timbre must be I-11 through I-88 or C-11 through C-88.")
     start = choices[target] * 8
     if not image.complete(start, 8):
         raise D20Error(f"Timbre slot {target} is incomplete; no values were guessed.")

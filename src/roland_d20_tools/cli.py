@@ -41,7 +41,7 @@ def parser() -> argparse.ArgumentParser:
         if name == "patch":
             report.add_argument("--patch", type=int, metavar="1..128", help="show one complete Patch record")
         elif name == "timbre":
-            report.add_argument("--slot", metavar="I-11..I-88 | C-11..C-88", help="show one complete Timbre slot")
+            report.add_argument("--timbre", metavar="I-11..I-88 | C-11..C-88", help="show one complete Timbre slot")
         elif name == "tone":
             report.add_argument("--tone", type=int, metavar="1..64", help="show one complete Tone record")
     commands.add_parser("song", help="Song .222 conversion (work in progress)")
@@ -60,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.command == "report":
             runner = getattr(reports, args.report)
-            option = {"patch": "patch", "timbre": "slot", "tone": "tone"}.get(args.report)
+            option = {"patch": "patch", "timbre": "timbre", "tone": "tone"}.get(args.report)
             print(runner(args.input, getattr(args, option)) if option else runner(args.input))
             return 0
         device_id = parse_device_id(args.device_id)

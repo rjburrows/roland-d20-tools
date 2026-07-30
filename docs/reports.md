@@ -17,7 +17,7 @@ d20-tools report REPORT INPUT [REPORT-OPTION]
 | --- | --- | --- |
 | `report system INPUT` | No extra option. Requires complete 50-byte area `10H`. | Master tune, global reverb, part reserves/levels/pans, and stored MIDI channels. |
 | `report patch INPUT` | `--patch 1..128` is optional. Requires area `07H`; the selected record must be complete. | Without `--patch`, a populated-patch index. With it, layout, split, both tone assignments, tuning, bender, assign and reverb values. |
-| `report timbre INPUT` | `--slot I-11..I-88` or `--slot C-11..C-88` is optional. Requires area `05H`. | Without `--slot`, a 128-slot index. With it, the complete tone assignment and performance values for that slot. |
+| `report timbre INPUT` | `--timbre I-11..I-88` or `--timbre C-11..C-88` is optional. Requires area `05H`. | Without `--timbre`, a 128-slot index. With it, the complete tone assignment and performance values for that slot. |
 | `report tone INPUT` | `--tone 1..64` is optional. Uses permanent `08H`, falling back to temporary `04H`. | Without `--tone`, complete tone names. With it, structure, partial activity, wave generator, LFO, TVF and TVA values. |
 | `report rhythm INPUT` | No extra option. Requires complete 340-byte area `09H`. | Assigned Rhythm Setup keys (C1–C8), tone, level, pan and reverb. |
 
@@ -26,7 +26,7 @@ Examples:
 ```sh
 d20-tools report system D20BACKUP.mid
 d20-tools report patch D20BACKUP.mid --patch 1
-d20-tools report timbre D20BACKUP.syx --slot I-26
+d20-tools report timbre D20BACKUP.syx --timbre I-26
 d20-tools report tone D20BACKUP.mid --tone 12
 d20-tools report rhythm D20BACKUP.mid
 ```
