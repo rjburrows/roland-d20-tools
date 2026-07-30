@@ -52,7 +52,7 @@ class PublicConverterTests(unittest.TestCase):
                 (["report", "system", str(source)], "Global System"),
                 (["report", "patch", str(source), "--patch", "1"], "Patch 1:"),
                 (["report", "timbre", str(source), "--timbre", "I-11"], "Timbre slot I-11"),
-                (["report", "tone", str(source), "--tone", "1"], "Tone 1:"),
+                (["report", "tone", str(source), "--tone", "i01"], "Internal/user Tone i01:"),
                 (["report", "rhythm", str(source)], "Rhythm Setup"),
             )
             for command, expected in cases:
@@ -61,6 +61,13 @@ class PublicConverterTests(unittest.TestCase):
                     self.assertEqual(cli.main(command), 0)
                 self.assertIn(expected, output.getvalue())
             self.assertEqual(cli.main(["report", "patch", str(source), "--patch", "129"]), 2)
+
+    def test_internal_tone_identifier_requires_i_prefix_and_two_digits(self) -> None:
+        self.assertEqual(cli.parse_internal_tone("i01"), 1)
+        self.assertEqual(cli.parse_internal_tone("I64"), 64)
+        for invalid in ("1", "i1", "i00", "i65", "a01"):
+            with self.assertRaises(Exception):
+                cli.parse_internal_tone(invalid)
 
     def test_selected_report_refuses_an_incomplete_record(self) -> None:
         address, payload = (0x07, 0x00, 0x00), (0x00,)

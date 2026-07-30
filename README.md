@@ -24,7 +24,7 @@ python -m pip install .
 ```sh
 d20-tools inspect D20BACKUP.mid
 d20-tools report patch D20BACKUP.mid --patch 1
-d20-tools report tone D20BACKUP.syx --tone 1
+d20-tools report tone D20BACKUP.syx --tone i01
 d20-tools sound TESTSND.333 TESTSND.mid
 d20-tools sound TESTSND.mid TESTSND.333 --name TESTSND
 d20-tools rhythm TESTRHY.444 TESTRHY.syx

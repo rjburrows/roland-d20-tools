@@ -18,7 +18,7 @@ d20-tools report REPORT INPUT [REPORT-OPTION]
 | `report system INPUT` | No extra option. Requires complete 50-byte area `10H`. | Master tune, global reverb, part reserves/levels/pans, and stored MIDI channels. |
 | `report patch INPUT` | `--patch 1..128` is optional. Requires area `07H`; the selected record must be complete. | Without `--patch`, a populated-patch index. With it, layout, split, both tone assignments, tuning, bender, assign and reverb values. |
 | `report timbre INPUT` | `--timbre I-11..I-88` or `--timbre C-11..C-88` is optional. Requires area `05H`. | Without `--timbre`, a 128-slot index. With it, the complete tone assignment and performance values for that slot. |
-| `report tone INPUT` | `--tone 1..64` is optional. Uses permanent `08H`, falling back to temporary `04H`. | Without `--tone`, complete tone names. With it, structure, partial activity, wave generator, LFO, TVF and TVA values. |
+| `report tone INPUT` | `--tone i01..i64` is optional. Uses permanent `08H`, falling back to temporary `04H`. | Without `--tone`, complete internal/user Tone names. With it, structure, partial activity, wave generator, LFO, TVF and TVA values. |
 | `report rhythm INPUT` | No extra option. Requires complete 340-byte area `09H`. | Assigned Rhythm Setup keys (C1–C8), tone, level, pan and reverb. |
 
 Examples:
@@ -27,12 +27,21 @@ Examples:
 d20-tools report system D20BACKUP.mid
 d20-tools report patch D20BACKUP.mid --patch 1
 d20-tools report timbre D20BACKUP.syx --timbre I-26
-d20-tools report tone D20BACKUP.mid --tone 12
+d20-tools report tone D20BACKUP.mid --tone i12
 d20-tools report rhythm D20BACKUP.mid
 ```
 
 The option follows the input filename. This avoids ambiguity and makes it easy
 to paste the command shown by `d20-tools report REPORT --help`.
+
+## Tone inspection scope
+
+The Tone report exposes only editable internal/user Tones: `i01` through
+`i64`, held in permanent area `08H` (or temporary working area `04H` when a
+dump has no permanent Tone area). It does **not** decode Preset A or Preset B
+Tones. Those are fixed D-20 ROM elements rather than user data in a DT1 dump.
+They may appear by name in Patch, Timbre, or Rhythm reports when an editable
+record refers to one.
 
 ## Example output
 
@@ -79,7 +88,7 @@ Bender range: 2; assign mode: 1; reverb: ON
 ### One Tone
 
 ```text
-Tone 1: AcouPiano1 (address 08H)
+Internal/user Tone i01: AcouPiano1 (address 08H)
 Structure 1/2: 6 (P-P (Mix)); structure 3/4: 1 (S-S (Mix))
 Envelope mode: Normal
 

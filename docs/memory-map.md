@@ -9,10 +9,10 @@ area, the byte offset is `MID × 128 + LSB`; all ranges below are inclusive.
 
 | Address area | Bytes | Used by | Meaning |
 | --- | ---: | --- | --- |
-| `04H 00 00–7F 7F` | 16,384 | Tone report | Temporary Tone memory (used only when no permanent Tone data is present). |
+| `04H 00 00–7F 7F` | 16,384 | Tone report | Temporary editable Tone memory (used only when no permanent Tone data is present). |
 | `05H 00 00–07 7F` | 1,024 | Sound converter; Timbre report | 128 Timbre records × 8 bytes. |
 | `07H 00 00–25 7F` | 4,864 | Sound converter; Patch report | 128 Patch records × 38 bytes. |
-| `08H 00 00–7F 7F` | 16,384 | Sound converter; Tone report | 64 permanent Tone records × 256 bytes. |
+| `08H 00 00–7F 7F` | 16,384 | Sound converter; Tone report | 64 permanent internal/user Tone records × 256 bytes. |
 | `09H 00 00–02 53` | 340 | Rhythm converter; Rhythm report | Rhythm Setup: 85 notes × 4 bytes. |
 | `0AH 00 00–7F 7F` | 16,384 | Rhythm converter; compact inspection | Rhythm Patterns. |
 | `0BH 00 00–12 7F` | 2,432 | Rhythm converter; compact inspection | Rhythm Track. |
@@ -22,6 +22,10 @@ area, the byte offset is `MID × 128 + LSB`; all ranges below are inclusive.
 `inspect` recognises each row but only prints message counts. The five `report`
 decoders read `04H/05H/07H/08H/09H/10H`; `0AH/0BH/0CH` are preserved by the
 Rhythm converter but are not yet interpreted as musical events.
+
+Preset A and Preset B Tone definitions are fixed ROM content, not editable
+DT1 Tone-memory records. The Tone report therefore exposes only internal/user
+Tones (`i01–i64`); the other reports show preset names only when referenced.
 
 ## Detailed report records
 

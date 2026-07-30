@@ -177,7 +177,7 @@ def tone(path: Path, number: int | None = None) -> str:
     if not image.coverage():
         raise D20Error("No Tone data was found in address 08H or 04H.")
     if number is None:
-        lines = [f"Tone names (address {area})", "ID   Name"]
+        lines = [f"Internal/user Tone names (address {area})", "ID   Name"]
         for index in range(64):
             start = index * 256
             if image.complete(start, 10):
@@ -193,7 +193,7 @@ def tone(path: Path, number: int | None = None) -> str:
     data = bytes(image.data[start : start + 256])
     structures = (data[10] + 1, data[11] + 1)
     source_pairs = tuple(("S" if "S" in STRUCTURES.get(structure, "S-S").split(" ")[0].split("-")[part] else "P") for structure in structures for part in range(2))
-    lines = [f"Tone {number}: {printable_text(data[:10])} (address {area})", f"Structure 1/2: {structures[0]} ({STRUCTURES.get(structures[0], 'Unknown')}); structure 3/4: {structures[1]} ({STRUCTURES.get(structures[1], 'Unknown')})", f"Envelope mode: {'No Sustain' if data[13] == 1 else 'Normal'}"]
+    lines = [f"Internal/user Tone i{number:02d}: {printable_text(data[:10])} (address {area})", f"Structure 1/2: {structures[0]} ({STRUCTURES.get(structures[0], 'Unknown')}); structure 3/4: {structures[1]} ({STRUCTURES.get(structures[1], 'Unknown')})", f"Envelope mode: {'No Sustain' if data[13] == 1 else 'Normal'}"]
     for partial, offset in enumerate((14, 72, 130, 188)):
         active = bool(data[12] & (1 << partial))
         lines.append(f"\nPartial {partial + 1} [{source_pairs[partial]}]: {'ACTIVE' if active else 'MUTED'}")

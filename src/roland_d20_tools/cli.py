@@ -18,6 +18,17 @@ def add_converter_arguments(parser: argparse.ArgumentParser, label: str) -> None
     parser.add_argument("--force", action="store_true", help="replace an existing output")
 
 
+def parse_internal_tone(value: str) -> int:
+    """Parse an internal/user Tone identifier such as ``i01``."""
+    normalized = value.strip().lower()
+    if len(normalized) != 3 or normalized[0] != "i" or not normalized[1:].isdigit():
+        raise argparse.ArgumentTypeError("--tone must be an internal Tone identifier from i01 through i64.")
+    number = int(normalized[1:])
+    if not 1 <= number <= 64:
+        raise argparse.ArgumentTypeError("--tone must be an internal Tone identifier from i01 through i64.")
+    return number
+
+
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(prog="d20-tools", description="Safe local SysEx inspection and file conversion for Roland D-20 data.")
     commands = result.add_subparsers(dest="command", required=True, title="commands")
@@ -43,7 +54,7 @@ def parser() -> argparse.ArgumentParser:
         elif name == "timbre":
             report.add_argument("--timbre", metavar="I-11..I-88 | C-11..C-88", help="show one complete Timbre slot")
         elif name == "tone":
-            report.add_argument("--tone", type=int, metavar="1..64", help="show one complete Tone record")
+            report.add_argument("--tone", type=parse_internal_tone, metavar="i01..i64", help="show one complete internal/user Tone record")
     commands.add_parser("song", help="Song .222 conversion (work in progress)")
     commands.add_parser("all", help="All .111 conversion (work in progress)")
     return result
