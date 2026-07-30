@@ -34,6 +34,76 @@ d20-tools report rhythm D20BACKUP.mid
 The option follows the input filename. This avoids ambiguity and makes it easy
 to paste the command shown by `d20-tools report REPORT --help`.
 
+## Example output
+
+These shortened examples are from `Awkward.mid`. Actual names and values will
+reflect the dump being inspected. Long reports continue for every complete
+record or assigned rhythm key.
+
+### System
+
+```text
+D-20 Global System Settings (10 00 00)
+Master tune: 62
+Global reverb: Hall 2 (time 7, level 7)
+
+Part     Reserve  Level  Pan     Stored MIDI channel
+Part 1         3    100  Center  1
+Part 2         3    100  Center  1
+...
+Rhythm         6    100  Per-key  1
+```
+
+### One Patch and Timbre slot
+
+```text
+Patch 1: Warm Pad Fade
+Layout: Whole; split: C1
+Level: 100; balance (lower/upper): 50
+Reverb: Delay 3; time: 8; level: 7
+
+Parameter         Lower                              Upper
+Tone              i17 (Warm Pad)                     i17 (Warm Pad)
+Key shift         +0                                 +0
+Fine tune         -3                                 +5
+...
+```
+
+```text
+Timbre slot I-11
+Tone: i01 (AcouPiano1)
+Key shift: +0; fine tune: +0
+Bender range: 2; assign mode: 1; reverb: ON
+```
+
+### One Tone
+
+```text
+Tone 1: AcouPiano1 (address 08H)
+Structure 1/2: 6 (P-P (Mix)); structure 3/4: 1 (S-S (Mix))
+Envelope mode: Normal
+
+Partial 1 [P]: ACTIVE
+  Wave generator: pitch C3, fine +2, key follow s2, bender ON
+  Wave: PCM bank 0, wave 33; pulse width 0; pulse-width velocity +0
+  LFO: rate 0, depth 0, modulation 0
+  Pitch envelope: depth 1, velocity 0, time key follow 4; times [0, 43, 69, 100]
+  TVF: cutoff 0, resonance 0, key follow 3/8, bias C1 / +0
+  TVA: level 100, velocity +45; bias 1 A9 / +4; bias 2 A#3 / +2
+```
+
+### Rhythm Setup
+
+```text
+D-20 Rhythm Setup (09 00 00)
+Note       Tone                              Level  Pan     Reverb
+A1         i11 (LowTomTom1)                  100    Center  OFF
+B1         r15 (Bass Drum-1)                 100    Center  OFF
+C2         r16 (Bass Drum-2)                 100    Center  OFF
+C#2        r25 (Rim Shot)                    100    Center  ON
+...
+```
+
 ## Safe handling of partial transfers
 
 An index report may display records whose individual bytes are complete even
