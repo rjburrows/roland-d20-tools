@@ -4,6 +4,10 @@ Song files use the `.222` extension. The command is included so the public
 interface has a stable place for future support, but it intentionally performs
 no conversion in version 0.1 and exits with a clear WIP message.
 
+`d20-tools inspect INPUT` already identifies a native Song container from its
+validated structure, including its embedded Rhythm section; this does not rely
+on the filename extension.
+
 Song conversion needs separate treatment for the real-time note tracks and the
 rhythm-pattern chain. It will not be released until both can be validated
 without altering the source file.

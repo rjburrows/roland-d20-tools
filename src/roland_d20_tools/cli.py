@@ -19,13 +19,14 @@ class OutputParser(argparse.ArgumentParser):
 
     def _print_message(self, message: str | None, file=None) -> None:
         if message:
-            super()._print_message(f"\n{message}", file)
+            super()._print_message(f"\n{message}\n", file)
 
 
 def emit(message: str, *, file=None) -> None:
     """Print one command result with a leading blank line."""
     print(file=file)
     print(message, file=file)
+    print(file=file)
 
 
 def add_converter_arguments(parser: argparse.ArgumentParser, label: str) -> None:
@@ -78,11 +79,11 @@ def parser() -> argparse.ArgumentParser:
     add_converter_arguments(rhythm_parser, "Rhythm (.444), MIDI, or SysEx")
     inspect_parser = commands.add_parser(
         "inspect",
-        help="summarize D-20 DT1 SysEx in a MIDI or SysEx file",
-        description="Validate a D-20 dump and show the number of complete DT1 messages in each recognised memory area. This command never changes files.",
-        epilog=examples("d20-tools inspect D20BACKUP.mid"),
+        help="identify native files or summarize D-20 SysEx data",
+        description="Identify a native D-20 file or validate a D-20 MIDI/SysEx dump, then show complete DT1 messages in each recognised memory area. This command never changes files.",
+        epilog=examples("d20-tools inspect D20BACKUP.mid", "d20-tools inspect TESTSONG.222"),
     )
-    inspect_parser.add_argument("input", type=Path, help="source .mid/.midi or raw .syx D-20 dump")
+    inspect_parser.add_argument("input", type=Path, help="source MIDI, SysEx, or native D-20 file")
     report_parser = commands.add_parser(
         "report",
         help="decode System, Patch, Timbre, Tone, or Rhythm parameters",

@@ -4,8 +4,9 @@ Safe, local inspection and conversion tools for Roland D-20 SysEx and disk
 files. Nothing is uploaded: the tools read and write files on your computer.
 
 Version 0.1 inspects and reports on standard MIDI, Raw SysEx, Sound (`.333`),
-and Rhythm (`.444`) D-20 files, and converts Sound and Rhythm disk files. Song
-(`.222`) and All (`.111`) commands are deliberately present as work-in-progress
+and Rhythm (`.444`) D-20 files, and converts Sound and Rhythm disk files.
+`inspect` also identifies native Song (`.222`) and All (`.111`) containers from
+their contents. The Song and All conversion commands remain work-in-progress
 placeholders; they do not modify or convert files yet.
 
 ## Install
@@ -71,10 +72,12 @@ address and native-file layout tables.
 
 `d20-tools inspect` is deliberately brief: it validates a `.333`, `.444`,
 `.mid`, `.midi`, or `.syx` file and prints the number of valid DT1-equivalent
-messages in each recognised area. It writes no file. Detailed parameter reports
-are available through the nested `d20-tools report` commands for System, Patch,
-Timbre, Tone, and Rhythm Setup data. All inspection and report commands are
-read-only.
+messages in each recognised area. It also identifies native `.222` Song and
+`.111` All containers from their structure rather than their filename
+extension. Every inspection ends with an explicit file-type declaration. It
+writes no file. Detailed parameter reports are available through the nested
+`d20-tools report` commands for System, Patch, Timbre, Tone, and Rhythm Setup
+data. All inspection and report commands are read-only.
 
 ## Testing
 

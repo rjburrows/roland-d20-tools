@@ -60,11 +60,18 @@ class PublicConverterTests(unittest.TestCase):
                 with redirect_stdout(output):
                     self.assertEqual(cli.main(command), 0)
                 self.assertTrue(output.getvalue().startswith("\n"))
+                self.assertTrue(output.getvalue().endswith("\n\n"))
                 self.assertIn(expected, output.getvalue())
+            inspection = io.StringIO()
+            with redirect_stdout(inspection):
+                self.assertEqual(cli.main(["inspect", str(source)]), 0)
+            self.assertTrue(inspection.getvalue().endswith("\n\n"))
+            self.assertIn("This is an ALL file.", inspection.getvalue())
             errors = io.StringIO()
             with redirect_stderr(errors):
                 self.assertEqual(cli.main(["report", "patch", str(source), "--patch", "129"]), 2)
             self.assertTrue(errors.getvalue().startswith("\n"))
+            self.assertTrue(errors.getvalue().endswith("\n\n"))
 
     def test_internal_tone_identifier_requires_i_prefix_and_two_digits(self) -> None:
         self.assertEqual(cli.parse_internal_tone("i01"), 1)
@@ -206,6 +213,7 @@ class PublicConverterTests(unittest.TestCase):
             rebuilt = root / "publictest.333"
             source.write_bytes(raw)
             self.assertIn("Tone: 64 message(s)", inspect.report(source))
+            self.assertTrue(inspect.report(source).endswith("This is a SOUND file."))
             with redirect_stdout(io.StringIO()):
                 self.assertEqual(cli.main(["report", "tone", str(source), "--tone", "i01"]), 0)
                 self.assertEqual(cli.main(["report", "timbre", str(source), "--timbre", "A-11"]), 0)
@@ -216,6 +224,26 @@ class PublicConverterTests(unittest.TestCase):
             self.assertEqual(cli.main(["sound", str(midi), str(rebuilt)]), 0)
             self.assertEqual(sound.decode(rebuilt)[0], "PUBLICTEST")
             self.assertEqual(rebuilt.read_bytes(), raw)
+
+    def test_inspect_identifies_native_song_and_all_from_contents(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            song = bytearray(inspect.SONG_FILE_SIZE)
+            song[2] = 0x03
+            song[6:16] = b"UNIT SONG "
+            song[inspect.SONG_EMBEDDED_RHYTHM_OFFSET : inspect.SONG_EMBEDDED_RHYTHM_OFFSET + 3] = b"\x03\x11\x00"
+            song_path = root / "not-a-song.bin"
+            song_path.write_bytes(song)
+            self.assertEqual(inspect.native_type(song_path), ("SONG", "UNIT SONG"))
+            self.assertTrue(inspect.report(song_path).endswith("This is a SONG file."))
+
+            all_file = bytearray(inspect.ALL_FILE_SIZE)
+            all_file[2], all_file[0x10] = 0x03, 0x01
+            all_file[6:16] = b"UNIT ALL  "
+            all_path = root / "not-an-all.bin"
+            all_path.write_bytes(all_file)
+            self.assertEqual(inspect.native_type(all_path), ("ALL", "UNIT ALL"))
+            self.assertTrue(inspect.report(all_path).endswith("This is an ALL file."))
 
     def test_native_validation_and_safe_conversion_failures(self) -> None:
         tones = complete_image(sound.TONE_COUNT * sound.TONE_SYSEX_SIZE)
@@ -292,6 +320,7 @@ class PublicConverterTests(unittest.TestCase):
             rebuilt = root / "rhytest.444"
             source.write_bytes(raw)
             self.assertIn("Rhythm Pattern: 64 message(s)", inspect.report(source))
+            self.assertTrue(inspect.report(source).endswith("This is a RHYTHM file."))
             with redirect_stdout(io.StringIO()):
                 self.assertEqual(cli.main(["report", "rhythm", str(source)]), 0)
             self.assertEqual(cli.main(["rhythm", str(source), str(midi)]), 0)
@@ -319,6 +348,7 @@ class PublicConverterTests(unittest.TestCase):
             cli.main(["--help"])
         self.assertEqual(exited.exception.code, 0)
         self.assertTrue(output.getvalue().startswith("\n"))
+        self.assertTrue(output.getvalue().endswith("\n\n"))
 
     def test_converter_help_has_no_filename_override(self) -> None:
         output = io.StringIO()
@@ -350,6 +380,7 @@ class PublicConverterTests(unittest.TestCase):
                 self.assertEqual(exited.exception.code, 0)
                 self.assertIn("Examples:", output.getvalue())
                 self.assertIn("d20-tools", output.getvalue())
+                self.assertTrue(output.getvalue().endswith("\n\n"))
 
 
 class LocalRegressionTests(unittest.TestCase):
