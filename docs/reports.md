@@ -101,7 +101,7 @@ Fine tune         -3                                 +5
 
 ```text
 Timbre A-11
-Tone: i01 (AcouPiano1)
+Tone: i01 AcouPiano1
 Key shift: +0; fine tune: +0
 Bender range: 2; assign mode: 1; reverb: ON
 ```

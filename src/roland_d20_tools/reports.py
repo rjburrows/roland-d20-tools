@@ -135,15 +135,18 @@ def _area(messages, area: int, size: int, label: str):
     return image
 
 
-def _tone_label(group: int, number: int, names: dict[int, str]) -> str:
+def _tone_label(group: int, number: int, names: dict[int, str], *, parenthesize_name: bool = True) -> str:
+    def label(identifier: str, name: str) -> str:
+        return f"{identifier} ({name})" if parenthesize_name else f"{identifier} {name}"
+
     if group == 0:
-        return f"a{number + 1:02d} ({_value(PRESET_A, number)})"
+        return label(f"a{number + 1:02d}", _value(PRESET_A, number))
     if group == 1:
-        return f"b{number + 1:02d} ({_value(PRESET_B, number)})"
+        return label(f"b{number + 1:02d}", _value(PRESET_B, number))
     if group == 2:
-        return f"i{number + 1:02d} ({names.get(number, 'User Tone')})"
+        return label(f"i{number + 1:02d}", names.get(number, "User Tone"))
     if group == 3:
-        return f"r{number + 1:02d} ({_value(RHYTHM_TONES, number)})"
+        return label(f"r{number + 1:02d}", _value(RHYTHM_TONES, number))
     return f"unknown group {group}, tone {number + 1}"
 
 
@@ -225,7 +228,7 @@ def timbre(path: Path, selection: str | None = None) -> str:
             if image.complete(start, 8):
                 group, number = image.data[start], image.data[start + 1]
                 source = ("Preset A", "Preset B", "User", "Rhythm")[group] if group < 4 else "Unknown"
-                lines.append(f"{_timbre_id(index):<8} {source:<11} {_tone_label(group, number, names)}")
+                lines.append(f"{_timbre_id(index):<8} {source:<11} {_tone_label(group, number, names, parenthesize_name=False)}")
         return "\n".join(lines)
     target = selection.upper().strip()
     choices = {_timbre_id(index): index for index in range(128)}
@@ -236,7 +239,7 @@ def timbre(path: Path, selection: str | None = None) -> str:
         raise D20Error(f"Timbre {target} is incomplete; no values were guessed.")
     data = image.data[start : start + 8]
     return "\n".join((
-        f"Timbre {target}", f"Tone: {_tone_label(data[0], data[1], names)}", f"Key shift: {_signed(data[2], 24, 0, 48)}; fine tune: {_signed(data[3], 50, 0, 100)}",
+        f"Timbre {target}", f"Tone: {_tone_label(data[0], data[1], names, parenthesize_name=False)}", f"Key shift: {_signed(data[2], 24, 0, 48)}; fine tune: {_signed(data[3], 50, 0, 100)}",
         f"Bender range: {_raw(data[4], 0, 24)}; assign mode: {_one_based(data[5], 3)}; reverb: {'ON' if data[6] == 1 else 'OFF' if data[6] == 0 else _raw(data[6], 0, 1)}",
     ))
 

@@ -117,6 +117,8 @@ class PublicConverterTests(unittest.TestCase):
             with self.assertRaisesRegex(D20Error, "A-11 through A-88 or B-11 through B-88"):
                 reports.timbre(source, "I-11")
         self.assertIn("Timbre A-11", output)
+        self.assertIn("Tone: i01 User Tone", output)
+        self.assertNotIn("Tone: i01 (User Tone)", output)
         self.assertIn("Key shift: -24; fine tune: +50", output)
         self.assertIn("Bender range: 24; assign mode: 4; reverb: ON", output)
         self.assertIn("Timbre B-11", bank_b_output)
