@@ -3,6 +3,8 @@
 ```mermaid
 flowchart TD
     CLI[d20-tools CLI] --> I[Compact inspector]
+    CLI --> F[Named-sound finder]
+    CLI --> H[Doctor support summary]
     CLI --> D[Detailed diagnostic reports]
     CLI --> S[Sound converter]
     CLI --> R[Rhythm converter]
@@ -10,6 +12,7 @@ flowchart TD
     S --> Core[Shared D-20 validation core]
     R --> Core
     D --> Core
+    F --> Core
     Core --> Native[Native .333 / .444 files]
     Core --> Midi[Standard MIDI .mid]
     Core --> Syx[Raw SysEx .syx]

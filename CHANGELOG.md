@@ -17,6 +17,8 @@ and this project uses [Semantic Versioning](https://semver.org/).
 - Explicit detection of native Song (`.222`) and All (`.111`) containers.
 - Public automated tests, optional private regression checks, and CI release
   verification.
+- Machine-readable JSON and CSV output for named-sound searches, plus
+  `d20-tools --version` and the `d20-tools doctor` support summary.
 
 ### Known limitations
 

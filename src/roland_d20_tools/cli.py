@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 import sys
 
-from . import finder, inspect, reports, rhythm, sound
+from . import __version__, doctor, finder, inspect, reports, rhythm, sound
 from .core import D20Error, parse_device_id
 
 
@@ -22,11 +22,13 @@ class OutputParser(argparse.ArgumentParser):
             super()._print_message(f"\n{message}\n", file)
 
 
-def emit(message: str, *, file=None) -> None:
-    """Print one command result with a leading blank line."""
-    print(file=file)
+def emit(message: str, *, file=None, padded: bool = True) -> None:
+    """Print one command result, padding human-readable output."""
+    if padded:
+        print(file=file)
     print(message, file=file)
-    print(file=file)
+    if padded:
+        print(file=file)
 
 
 def add_converter_arguments(parser: argparse.ArgumentParser, label: str) -> None:
@@ -62,6 +64,7 @@ def parser() -> argparse.ArgumentParser:
             "d20-tools sound TESTSND.333 TESTSND.mid",
         ),
     )
+    result.add_argument("--version", action="version", version=f"%(prog)s {__version__}", help="show the installed version and exit")
     commands = result.add_subparsers(dest="command", required=True, title="commands")
     sound_parser = commands.add_parser(
         "sound",
@@ -88,12 +91,19 @@ def parser() -> argparse.ArgumentParser:
         "find",
         help="recursively find named Patches, Timbres, or Tones",
         description="Search supported D-20 MIDI, SysEx, Sound, and All files below a directory for named Patches, Timbres, and Tones. By default, matches are case-insensitive literal substrings.",
-        epilog=examples("d20-tools find ~/D20-library \"Star Synth\""),
+        epilog=examples("d20-tools find ~/D20-library \"Star Synth\"", "d20-tools find ~/D20-library StarSynth --type tone --format json"),
     )
     find_parser.add_argument("directory", type=Path, help="folder to search recursively")
     find_parser.add_argument("query", help="Patch, Timbre, or Tone name to find")
     find_parser.add_argument("--type", dest="match_type", choices=("all", "patch", "timbre", "tone"), default="all", help="limit matches to one kind (default: all)")
     find_parser.add_argument("--exact", action="store_true", help="require an exact case-insensitive name match")
+    find_parser.add_argument("--format", dest="output_format", choices=("text", "json", "csv"), default="text", help="output format (default: text)")
+    commands.add_parser(
+        "doctor",
+        help="show installed version and supported capabilities",
+        description="Show a read-only support summary of the installed D-20 Tools command and its capabilities.",
+        epilog=examples("d20-tools doctor"),
+    )
     report_parser = commands.add_parser(
         "report",
         help="decode System, Patch, Timbre, Tone, or Rhythm parameters",
@@ -148,7 +158,13 @@ def main(argv: list[str] | None = None) -> int:
             emit(inspect.report(args.input))
             return 0
         if args.command == "find":
-            emit(finder.search(args.directory, args.query, match_type=args.match_type, exact=args.exact))
+            emit(
+                finder.search(args.directory, args.query, match_type=args.match_type, exact=args.exact, output_format=args.output_format),
+                padded=args.output_format == "text",
+            )
+            return 0
+        if args.command == "doctor":
+            emit(doctor.report())
             return 0
         if args.command == "report":
             runner = getattr(reports, args.report)

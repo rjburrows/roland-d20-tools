@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import csv
 from dataclasses import dataclass
+import io
+import json
 from pathlib import Path
 
 from . import inspect, reports
@@ -22,6 +25,69 @@ class Match:
 
     def format(self) -> str:
         return f"  {self.kind} {self.identifier}: {self.detail}"
+
+
+@dataclass(frozen=True, slots=True)
+class SearchResults:
+    """Structured matches and accounting for one recursive search."""
+
+    query: str
+    match_type: str
+    exact: bool
+    files_scanned: int
+    files_skipped: int
+    matches: tuple[tuple[Path, Match], ...]
+
+    @property
+    def files_with_matches(self) -> int:
+        return len({path for path, _ in self.matches})
+
+    def text(self) -> str:
+        sections: list[str] = []
+        for path in dict.fromkeys(path for path, _ in self.matches):
+            lines = [str(path)]
+            lines.extend(match.format() for match_path, match in self.matches if match_path == path)
+            sections.append("\n".join(lines))
+        mode = "exact" if self.exact else "case-insensitive substring"
+        summary = (
+            f"Searched {self.files_scanned} supported file(s) for {self.query!r} ({mode}); "
+            f"found {len(self.matches)} match(es) in {self.files_with_matches} file(s)."
+        )
+        if self.files_skipped:
+            summary += f" Skipped {self.files_skipped} unsupported or incomplete D-20 file(s)."
+        return "\n\n".join((*sections, summary)) if sections else summary
+
+    def json(self) -> str:
+        """Return a stable, machine-readable record of this search."""
+        return json.dumps(
+            {
+                "query": self.query,
+                "match_type": self.match_type,
+                "exact": self.exact,
+                "files_scanned": self.files_scanned,
+                "files_skipped": self.files_skipped,
+                "files_with_matches": self.files_with_matches,
+                "matches": [
+                    {
+                        "file": str(path),
+                        "kind": match.kind,
+                        "identifier": match.identifier,
+                        "detail": match.detail,
+                    }
+                    for path, match in self.matches
+                ],
+            },
+            indent=2,
+        )
+
+    def csv(self) -> str:
+        """Return one CSV record for each named object match."""
+        output = io.StringIO(newline="")
+        writer = csv.DictWriter(output, fieldnames=("file", "kind", "identifier", "detail"))
+        writer.writeheader()
+        for path, match in self.matches:
+            writer.writerow({"file": path, "kind": match.kind, "identifier": match.identifier, "detail": match.detail})
+        return output.getvalue().rstrip("\r\n")
 
 
 def _matches(value: str, query: str, exact: bool) -> bool:
@@ -101,7 +167,7 @@ def _search_file(path: Path, query: str, match_type: str, exact: bool) -> list[M
     return results
 
 
-def search(directory: Path, query: str, *, match_type: str, exact: bool) -> str:
+def search_results(directory: Path, query: str, *, match_type: str, exact: bool) -> SearchResults:
     """Search supported D-20 files below ``directory`` for a literal name."""
     root = directory.expanduser()
     if not root.is_dir():
@@ -111,22 +177,23 @@ def search(directory: Path, query: str, *, match_type: str, exact: bool) -> str:
         raise D20Error("Search text must not be empty.")
 
     candidates = sorted(path for path in root.rglob("*") if path.is_file() and path.suffix.lower() in SUPPORTED_SUFFIXES)
-    files_with_matches = match_count = skipped = 0
-    sections: list[str] = []
+    skipped = 0
+    found: list[tuple[Path, Match]] = []
     for path in candidates:
         try:
             matches = _search_file(path, normalized_query, match_type, exact)
         except D20Error:
             skipped += 1
             continue
-        if not matches:
-            continue
-        files_with_matches += 1
-        match_count += len(matches)
-        sections.append("\n".join((str(path.resolve()), *(match.format() for match in matches))))
+        found.extend((path.resolve(), match) for match in matches)
+    return SearchResults(query, match_type, exact, len(candidates), skipped, tuple(found))
 
-    mode = "exact" if exact else "case-insensitive substring"
-    summary = f"Searched {len(candidates)} supported file(s) for {query!r} ({mode}); found {match_count} match(es) in {files_with_matches} file(s)."
-    if skipped:
-        summary += f" Skipped {skipped} unsupported or incomplete D-20 file(s)."
-    return "\n\n".join((*sections, summary)) if sections else summary
+
+def search(directory: Path, query: str, *, match_type: str, exact: bool, output_format: str = "text") -> str:
+    """Search files and format results as text, JSON, or CSV."""
+    results = search_results(directory, query, match_type=match_type, exact=exact)
+    formatters = {"text": results.text, "json": results.json, "csv": results.csv}
+    try:
+        return formatters[output_format]()
+    except KeyError as exc:
+        raise D20Error("Search output format must be text, json, or csv.") from exc

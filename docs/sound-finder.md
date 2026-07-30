@@ -42,6 +42,18 @@ results:
 d20-tools find ~/D20-library StarSynth --type tone --exact
 ```
 
+## Structured output
+
+Use `--format json` for scripts and other tools that consume JSON, or
+`--format csv` for a spreadsheet. Machine-readable output has no decorative
+blank lines. JSON includes the query and scan totals; CSV has one row per
+match with `file`, `kind`, `identifier`, and `detail` columns.
+
+```sh
+d20-tools find ~/D20-library StarSynth --type tone --format json
+d20-tools find ~/D20-library StarSynth --format csv > starsynth.csv
+```
+
 Files which do not contain complete compatible D-20 name data are skipped and
 counted in the final summary. Native Rhythm and Song files are intentionally
 not searched: they do not store the editable Patch, Timbre, or Tone memories.

@@ -31,9 +31,12 @@ make package
 ## Commands
 
 ```sh
+d20-tools --version
 d20-tools inspect D20BACKUP.mid
 d20-tools inspect TESTSND.333
 d20-tools find ~/D20-library "Star Synth"
+d20-tools find ~/D20-library StarSynth --type tone --format json
+d20-tools doctor
 d20-tools report patch D20BACKUP.mid --patch 1
 d20-tools report patch TESTSND.333 --patch 1 --showtones
 d20-tools report timbre TESTSND.333 --timbre A-11 --showtones
@@ -51,6 +54,7 @@ replace the destination.
 | --- | --- | --- |
 | `d20-tools inspect` | Ready — compact DT1 area summary | [SysEx inspector](docs/sysex-inspector.md) |
 | `d20-tools find` | Ready — recursive named-sound search | [Sound finder](docs/sound-finder.md) |
+| `d20-tools doctor` | Ready — installed-version and capability summary | [Doctor](docs/doctor.md) |
 | `d20-tools report` | Ready — detailed read-only diagnostic reports | [Diagnostic reports](docs/reports.md) |
 | `d20-tools sound` | Ready | [Sound converter](docs/sound-converter.md) |
 | `d20-tools rhythm` | Ready | [Rhythm converter](docs/rhythm-converter.md) |

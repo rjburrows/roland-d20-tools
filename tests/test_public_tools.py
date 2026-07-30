@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import io
+import json
 from pathlib import Path
 import sys
 import tempfile
@@ -122,6 +123,8 @@ class PublicConverterTests(unittest.TestCase):
             output = finder.search(root, "starsynth", match_type="all", exact=False)
             exact = finder.search(root, "StarSynth", match_type="tone", exact=True)
             no_match = finder.search(root, "star", match_type="tone", exact=True)
+            json_output = finder.search(root, "StarSynth", match_type="tone", exact=True, output_format="json")
+            csv_output = finder.search(root, "StarSynth", match_type="tone", exact=True, output_format="csv")
         self.assertIn(str(source.resolve()), output)
         self.assertIn(str(native_source.resolve()), output)
         self.assertIn("Tone i17: StarSynth", output)
@@ -130,6 +133,12 @@ class PublicConverterTests(unittest.TestCase):
         self.assertIn("found 6 match(es) in 2 file(s)", output)
         self.assertIn("Tone i17: StarSynth", exact)
         self.assertIn("found 0 match(es) in 0 file(s)", no_match)
+        structured = json.loads(json_output)
+        self.assertEqual(structured["files_scanned"], 2)
+        self.assertEqual(structured["files_with_matches"], 2)
+        self.assertEqual(structured["matches"][0]["identifier"], "i17")
+        self.assertTrue(csv_output.startswith("file,kind,identifier,detail\r\n"))
+        self.assertEqual(len(csv_output.splitlines()), 3)
 
     def test_pcm_wave_names_use_one_based_reference_numbers(self) -> None:
         partial = bytearray(58)
@@ -416,6 +425,19 @@ class PublicConverterTests(unittest.TestCase):
         self.assertTrue(output.getvalue().startswith("\n"))
         self.assertTrue(output.getvalue().endswith("\n\n"))
 
+    def test_version_and_doctor_are_available_for_support(self) -> None:
+        version = io.StringIO()
+        with redirect_stdout(version), self.assertRaises(SystemExit) as exited:
+            cli.main(["--version"])
+        self.assertEqual(exited.exception.code, 0)
+        self.assertIn("d20-tools 0.1.0", version.getvalue())
+        doctor_output = io.StringIO()
+        with redirect_stdout(doctor_output):
+            self.assertEqual(cli.main(["doctor"]), 0)
+        self.assertIn("D-20 Tools doctor", doctor_output.getvalue())
+        self.assertIn("Version: 0.1.0", doctor_output.getvalue())
+        self.assertIn("Live MIDI input/output: not included", doctor_output.getvalue())
+
     def test_converter_help_has_no_filename_override(self) -> None:
         output = io.StringIO()
         with redirect_stdout(output), self.assertRaises(SystemExit) as exited:
@@ -430,6 +452,7 @@ class PublicConverterTests(unittest.TestCase):
             ("rhythm",),
             ("inspect",),
             ("find",),
+            ("doctor",),
             ("report",),
             ("report", "system"),
             ("report", "patch"),
