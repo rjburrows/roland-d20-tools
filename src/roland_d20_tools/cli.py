@@ -62,11 +62,13 @@ def parser() -> argparse.ArgumentParser:
         ("rhythm", "decode 09H Rhythm Setup assignments"),
     ):
         report = report_commands.add_parser(name, help=help_text)
-        report.add_argument("input", type=Path, help="source .mid/.midi or raw .syx D-20 dump")
+        report.add_argument("input", type=Path, help="source .333/.444, .mid/.midi, or raw .syx D-20 data")
         if name == "patch":
             report.add_argument("--patch", type=int, metavar="1..128", help="show one complete Patch record")
+            report.add_argument("--showtones", action="store_true", help="append assigned editable Tone configuration (requires --patch)")
         elif name == "timbre":
             report.add_argument("--timbre", metavar="A-11..A-88 | B-11..B-88", help="show one complete Timbre")
+            report.add_argument("--showtones", action="store_true", help="append assigned editable Tone configuration (requires --timbre)")
         elif name == "tone":
             report.add_argument("--tone", type=parse_internal_tone, metavar="i01..i64", help="show one complete internal/user Tone record")
     commands.add_parser("song", help="Song .222 conversion (work in progress)")
@@ -85,8 +87,15 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.command == "report":
             runner = getattr(reports, args.report)
-            option = {"patch": "patch", "timbre": "timbre", "tone": "tone"}.get(args.report)
-            emit(runner(args.input, getattr(args, option)) if option else runner(args.input))
+            if args.report == "patch":
+                result = runner(args.input, args.patch, showtones=args.showtones)
+            elif args.report == "timbre":
+                result = runner(args.input, args.timbre, showtones=args.showtones)
+            elif args.report == "tone":
+                result = runner(args.input, args.tone)
+            else:
+                result = runner(args.input)
+            emit(result)
             return 0
         device_id = parse_device_id(args.device_id)
         converter = sound.convert if args.command == "sound" else rhythm.convert

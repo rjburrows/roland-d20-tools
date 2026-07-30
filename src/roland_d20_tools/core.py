@@ -172,6 +172,22 @@ def load_dt1(path: Path) -> list[D20Message]:
     raise D20Error("D-20 reports accept Standard MIDI (.mid/.midi) or raw SysEx (.syx) files.")
 
 
+def load_report_messages(path: Path) -> list[D20Message]:
+    """Read report input from DT1 MIDI/SysEx or a native Sound/Rhythm file."""
+    source = path.expanduser()
+    if source.suffix.lower() == ".333":
+        from . import sound
+
+        _, tones, timbres, patches = sound.decode(source)
+        return scan_messages([*make_messages(0x05, timbres, 0x10), *make_messages(0x07, patches, 0x10), *make_messages(0x08, tones, 0x10)])
+    if source.suffix.lower() == ".444":
+        from . import rhythm
+
+        _, setup, pattern, track, sequencer = rhythm.decode(source)
+        return scan_messages([*make_messages(0x09, setup, 0x10), *make_messages(0x0A, pattern, 0x10), *make_messages(0x0B, track, 0x10), *make_messages(0x0C, sequencer, 0x10)])
+    return load_dt1(source)
+
+
 def printable_text(values: Iterable[int]) -> str:
     """Return a trimmed fixed-width D-20 text field."""
     return "".join(chr(value) if 32 <= value <= 126 else " " for value in values).strip()

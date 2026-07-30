@@ -129,6 +129,34 @@ class PublicConverterTests(unittest.TestCase):
         self.assertIn("Bender range: 24; assign mode: 4; reverb: ON", output)
         self.assertIn("Timbre B-11", bank_b_output)
 
+    def test_patch_and_timbre_show_assigned_user_tones(self) -> None:
+        timbres = complete_image(128 * 8)
+        patches = complete_image(128 * 38)
+        tones = complete_image(64 * 256)
+        timbres.data[:8] = bytes((2, 0, 24, 50, 2, 0, 1, 0))
+        patches.data[2:6] = bytes((2, 0, 2, 1))
+        tones.data[:10] = b"TONE ONE  "
+        tones.data[256:266] = b"TONE TWO  "
+        messages = [*make_messages(0x05, timbres, 0x10), *make_messages(0x07, patches, 0x10), *make_messages(0x08, tones, 0x10)]
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "showtones.mid"
+            midi_from_messages(messages).save(source)
+            timbre_output = reports.timbre(source, "A-11", showtones=True)
+            patch_output = reports.patch(source, 1, showtones=True)
+            command_output = io.StringIO()
+            with redirect_stdout(command_output):
+                self.assertEqual(cli.main(["report", "patch", str(source), "--patch", "1", "--showtones"]), 0)
+            with self.assertRaisesRegex(D20Error, "requires --timbre"):
+                reports.timbre(source, showtones=True)
+            with self.assertRaisesRegex(D20Error, "requires --patch"):
+                reports.patch(source, showtones=True)
+        self.assertIn("Underlying Tone configuration", timbre_output)
+        self.assertIn("Internal/user Tone i01: TONE ONE", timbre_output)
+        self.assertIn("Lower Tone: i01 TONE ONE", patch_output)
+        self.assertIn("Upper Tone: i02 TONE TWO", patch_output)
+        self.assertIn("Internal/user Tone i02: TONE TWO", patch_output)
+        self.assertIn("Underlying Tone configuration", command_output.getvalue())
+
     def test_selected_report_refuses_an_incomplete_record(self) -> None:
         address, payload = (0x07, 0x00, 0x00), (0x00,)
         message = mido.Message("sysex", data=(0x41, 0x10, 0x16, 0x12, *address, *payload, roland_checksum((*address, *payload))))
@@ -151,6 +179,9 @@ class PublicConverterTests(unittest.TestCase):
             syx = root / "sound.syx"
             rebuilt = root / "rebuilt.333"
             source.write_bytes(raw)
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(cli.main(["report", "tone", str(source), "--tone", "i01"]), 0)
+                self.assertEqual(cli.main(["report", "timbre", str(source), "--timbre", "A-11"]), 0)
             self.assertEqual(cli.main(["sound", str(source), str(midi)]), 0)
             self.assertEqual(cli.main(["sound", str(source), str(syx)]), 0)
             self.assertIn("Tone: 64 message(s)", inspect.report(syx))
@@ -175,6 +206,8 @@ class PublicConverterTests(unittest.TestCase):
             midi = root / "rhythm.mid"
             rebuilt = root / "rebuilt.444"
             source.write_bytes(raw)
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(cli.main(["report", "rhythm", str(source)]), 0)
             self.assertEqual(cli.main(["rhythm", str(source), str(midi)]), 0)
             self.assertEqual(cli.main(["rhythm", str(midi), str(rebuilt), "--name", "RHYTEST"]), 0)
             self.assertEqual(rebuilt.read_bytes(), raw)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .core import D20Error, assemble_partial, load_dt1, note_name, printable_text, user_tone_names
+from .core import D20Error, assemble_partial, load_report_messages, note_name, printable_text, user_tone_names
 
 
 PRESET_A = (
@@ -122,7 +122,7 @@ def _bias_point(value: int) -> str:
 
 
 def _load(path: Path):
-    messages = load_dt1(path)
+    messages = load_report_messages(path)
     if not messages:
         raise D20Error("No valid Roland D-20 DT1 messages were found.")
     return messages
@@ -177,10 +177,12 @@ def system(path: Path) -> str:
     return "\n".join(lines)
 
 
-def patch(path: Path, number: int | None = None) -> str:
+def patch(path: Path, number: int | None = None, *, showtones: bool = False) -> str:
     messages = _load(path)
     image = _area(messages, 0x07, 128 * 38, "Patch data")
     names = user_tone_names(messages)
+    if showtones and number is None:
+        raise D20Error("--showtones requires --patch 1..128.")
     if number is None:
         lines = ["ID   Patch name         Layout"]
         for index in range(128):
@@ -196,7 +198,7 @@ def patch(path: Path, number: int | None = None) -> str:
         raise D20Error(f"Patch {number} is incomplete; no values were guessed.")
     data = image.data[start : start + 38]
     layout = ("Whole", "Dual", "Split")[data[0]] if data[0] < 3 else f"Unknown({data[0]})"
-    return "\n".join((
+    report = "\n".join((
         f"Patch {number}: {printable_text(data[21:37])}", f"Layout: {layout}; split: {note_name(data[1])}",
         f"Level: {data[20]}; balance (lower/upper): {data[19]}", f"Reverb: {_value(REVERB, data[16])}; time: {data[17] + 1}; level: {data[18]}", "",
         "Parameter         Lower                              Upper",
@@ -207,6 +209,10 @@ def patch(path: Path, number: int | None = None) -> str:
         f"Assign mode       {data[12] + 1}                                  {data[13] + 1}",
         f"Reverb switch     {'ON' if data[14] == 1 else 'OFF'}                                 {'ON' if data[15] == 1 else 'OFF'}",
     ))
+    if not showtones:
+        return report
+    assignments = (("Lower Tone", data[2], data[3]), ("Upper Tone", data[4], data[5]))
+    return f"{report}\n\n{_assigned_tone_reports(messages, assignments, names)}"
 
 
 def _timbre_id(index: int) -> str:
@@ -216,10 +222,12 @@ def _timbre_id(index: int) -> str:
     return f"{bank}-{item // 8 + 1}{item % 8 + 1}"
 
 
-def timbre(path: Path, selection: str | None = None) -> str:
+def timbre(path: Path, selection: str | None = None, *, showtones: bool = False) -> str:
     messages = _load(path)
     image = _area(messages, 0x05, 128 * 8, "Timbre data")
     names = user_tone_names(messages)
+    if showtones and selection is None:
+        raise D20Error("--showtones requires --timbre A-11..A-88 or B-11..B-88.")
     if selection is None:
         lines = ["Timbre  Source      Tone"]
         for index in range(128):
@@ -237,10 +245,14 @@ def timbre(path: Path, selection: str | None = None) -> str:
     if not image.complete(start, 8):
         raise D20Error(f"Timbre {target} is incomplete; no values were guessed.")
     data = image.data[start : start + 8]
-    return "\n".join((
+    report = "\n".join((
         f"Timbre {target}", f"Tone: {_tone_label(data[0], data[1], names, parenthesize_name=False)}", f"Key shift: {_signed(data[2], 24, 0, 48)}; fine tune: {_signed(data[3], 50, 0, 100)}",
         f"Bender range: {_raw(data[4], 0, 24)}; assign mode: {_one_based(data[5], 3)}; reverb: {'ON' if data[6] == 1 else 'OFF' if data[6] == 0 else _raw(data[6], 0, 1)}",
     ))
+    if not showtones:
+        return report
+    assignments = ((f"Timbre {target}", data[0], data[1]),)
+    return f"{report}\n\n{_assigned_tone_reports(messages, assignments, names)}"
 
 
 def _partial(data: bytes, offset: int, source: str) -> list[str]:
@@ -256,8 +268,7 @@ def _partial(data: bytes, offset: int, source: str) -> list[str]:
     ]
 
 
-def tone(path: Path, number: int | None = None) -> str:
-    messages = _load(path)
+def _tone_report(messages, number: int | None = None) -> str:
     permanent = assemble_partial(messages, 0x08, 64 * 256, "Tone data")
     temporary = assemble_partial(messages, 0x04, 64 * 256, "Temporary Tone data")
     image, area = (permanent, "08H") if permanent.coverage() else (temporary, "04H")
@@ -287,6 +298,36 @@ def tone(path: Path, number: int | None = None) -> str:
         if active:
             lines.extend(_partial(data, offset, source_pairs[partial]))
     return "\n".join(lines)
+
+
+def _assigned_tone_reports(messages, assignments: tuple[tuple[str, int, int], ...], names: dict[int, str]) -> str:
+    """Append editable Tone details for one or more Patch/Timbre assignments."""
+    sections = ["Underlying Tone configuration"]
+    source_descriptions = {
+        0: "a fixed Preset A ROM Tone; no editable Tone configuration is present in a DT1 dump.",
+        1: "a fixed Preset B ROM Tone; no editable Tone configuration is present in a DT1 dump.",
+        3: "a Rhythm Tone; no editable Tone configuration is present in a DT1 dump.",
+    }
+    for context, group, number in assignments:
+        label = _tone_label(group, number, names, parenthesize_name=False)
+        heading = f"{context}: {label}"
+        if group in source_descriptions:
+            sections.append(f"{heading}\n  This is {source_descriptions[group]}")
+            continue
+        if group != 2:
+            sections.append(f"{heading}\n  This uses an unknown Tone group; no configuration can be decoded.")
+            continue
+        try:
+            details = _tone_report(messages, number + 1)
+        except D20Error as exc:
+            sections.append(f"{heading}\n  Tone configuration unavailable: {exc}")
+        else:
+            sections.append(f"{heading}\n\n{details}")
+    return "\n\n".join(sections)
+
+
+def tone(path: Path, number: int | None = None) -> str:
+    return _tone_report(_load(path), number)
 
 
 def rhythm(path: Path) -> str:

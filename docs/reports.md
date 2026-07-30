@@ -1,9 +1,10 @@
 # Diagnostic reports (`d20-tools report`)
 
 The five reports are read-only decoders for a D-20 Standard MIDI (`.mid` or
-`.midi`) or raw SysEx (`.syx`) dump. They validate every Roland D-20 DT1 frame
-and checksum before decoding. They print to the terminal and never create,
-change, or transmit a file.
+`.midi`), raw SysEx (`.syx`), native Sound (`.333`), or native Rhythm (`.444`)
+file. They validate every Roland D-20 DT1 frame and checksum before decoding;
+native files are validated directly before their data is decoded. They print
+to the terminal and never create, change, or transmit a file.
 
 The command structure is intentionally nested:
 
@@ -16,8 +17,8 @@ d20-tools report REPORT INPUT [REPORT-OPTION]
 | Command | Input and optional parameter | Terminal output |
 | --- | --- | --- |
 | `report system INPUT` | No extra option. Requires complete 50-byte area `10H`. | Master tune, global reverb, part reserves/levels/pans, and stored MIDI channels. |
-| `report patch INPUT` | `--patch 1..128` is optional. Requires area `07H`; the selected record must be complete. | Without `--patch`, a populated-patch index. With it, layout, split, both tone assignments, tuning, bender, assign and reverb values. |
-| `report timbre INPUT` | `--timbre A-11..A-88` or `--timbre B-11..B-88` is optional. Requires area `05H`. | Without `--timbre`, a 128-Timbre index. With it, the complete tone assignment and performance values for that Timbre. |
+| `report patch INPUT` | `--patch 1..128` is optional; `--showtones` may follow a selected Patch. Requires area `07H`; the selected record must be complete. | Without `--patch`, a populated-patch index. With it, layout, split, both tone assignments, tuning, bender, assign and reverb values. `--showtones` appends both assigned editable Tone configurations. |
+| `report timbre INPUT` | `--timbre A-11..A-88` or `--timbre B-11..B-88` is optional; `--showtones` may follow a selected Timbre. Requires area `05H`. | Without `--timbre`, a 128-Timbre index. With it, the complete tone assignment and performance values for that Timbre. `--showtones` appends its assigned editable Tone configuration. |
 | `report tone INPUT` | `--tone i01..i64` is optional. Uses permanent `08H`, falling back to temporary `04H`. | Without `--tone`, complete internal/user Tone names. With it, structure, partial activity, wave generator, LFO, TVF and TVA values. |
 | `report rhythm INPUT` | No extra option. Requires complete 340-byte area `09H`. | Assigned Rhythm Setup keys (C1–C8), tone, level, pan and reverb. |
 
@@ -26,18 +27,34 @@ Examples:
 ```sh
 d20-tools report system D20BACKUP.mid
 d20-tools report patch D20BACKUP.mid --patch 1
+d20-tools report patch D20BACKUP.mid --patch 1 --showtones
 d20-tools report timbre D20BACKUP.syx --timbre A-26
+d20-tools report timbre D20BACKUP.syx --timbre A-26 --showtones
 d20-tools report tone D20BACKUP.mid --tone i12
 d20-tools report rhythm D20BACKUP.mid
+d20-tools report tone MY_SOUNDS.333 --tone i12
+d20-tools report rhythm MY_RHYTHMS.444
 ```
 
 The option follows the input filename. This avoids ambiguity and makes it easy
 to paste the command shown by `d20-tools report REPORT --help`.
 
+A `.333` contains Sound/Timbre/Patch/Tone data, so it can be used directly
+with `report tone`, `report timbre`, and `report patch` (including
+`--showtones`). A `.444` contains Rhythm data, so it can be used directly with
+`report rhythm`. A report that asks a file for data it cannot contain gives a
+clear "no data" error rather than converting it first.
+
 The Timbre area contains two 64-location **A** and **B** panel banks, each
 numbered `11` through `88`. `I` (internal) and `C` (memory card) are a
 separate storage-mode choice on the instrument; they are not Timbre-bank
 labels, so they are deliberately not accepted as report identifiers.
+
+`--showtones` requires a selected `--patch` or `--timbre`. It embeds the same
+detail that `report tone --tone i01` would show for an assigned internal/user
+Tone. Preset A/B and Rhythm Tones are fixed content, so their synthesis
+settings are not carried in a dump; the report identifies them rather than
+inventing a configuration.
 
 ## Tone inspection scope
 
