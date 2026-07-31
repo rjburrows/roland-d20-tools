@@ -32,6 +32,9 @@ Examples:
 
 ```sh
 d20-tools report system D20BACKUP.mid
+d20-tools report patch D20BACKUP.mid
+d20-tools report timbre D20BACKUP.syx
+d20-tools report tone D20BACKUP.mid
 d20-tools report patch D20BACKUP.mid --patch 1
 d20-tools report patch D20BACKUP.mid --patch 1 --showtones
 d20-tools report timbre D20BACKUP.syx --timbre A-26
@@ -41,6 +44,11 @@ d20-tools report rhythm D20BACKUP.mid
 d20-tools report tone MY_SOUNDS.333 --tone i12
 d20-tools report rhythm MY_RHYTHMS.444
 ```
+
+For Patch, Timbre, and Tone reports, no selection option means “list all”: the
+command prints every complete, populated Patch, Timbre, or internal/user Tone
+in the input. Supply `--patch`, `--timbre`, or `--tone` to decode one selected
+record in detail.
 
 The option follows the input filename. This avoids ambiguity and makes it easy
 to paste the command shown by `d20-tools report REPORT --help`.

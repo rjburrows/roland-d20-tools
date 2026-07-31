@@ -51,6 +51,9 @@ make package
 
 ```sh
 d20-tools --version
+d20-tools report patch TESTSND.333
+d20-tools report timbre TESTSND.333
+d20-tools report tone TESTSND.333
 d20-tools report patch D20BACKUP.mid --patch 1
 d20-tools report patch TESTSND.333 --patch 1 --showtones
 d20-tools report timbre TESTSND.333 --timbre A-11 --showtones
@@ -127,9 +130,9 @@ to the source file. Use the report that answers the question you have:
 | Report | What it shows | Example |
 | --- | --- | --- |
 | `system` | Global D-20 settings | `d20-tools report system D20BACKUP.mid` |
-| `patch` | A Patch and its two assigned Tones | `d20-tools report patch D20BACKUP.mid --patch 1 --showtones` |
-| `timbre` | A user Timbre and its assigned Tone | `d20-tools report timbre TESTSND.333 --timbre A-11 --showtones` |
-| `tone` | One internal user Tone, including PCM waveform names | `d20-tools report tone D20BACKUP.syx --tone i01` |
+| `patch` | A list of populated Patches, or one Patch and its two assigned Tones | `d20-tools report patch D20BACKUP.mid --patch 1 --showtones` |
+| `timbre` | A list of populated Timbres, or one user Timbre and its assigned Tone | `d20-tools report timbre TESTSND.333 --timbre A-11 --showtones` |
+| `tone` | A list of internal user Tones, or one Tone including PCM waveform names | `d20-tools report tone D20BACKUP.syx --tone i01` |
 | `rhythm` | Rhythm Setup parameters | `d20-tools report rhythm TESTRHY.444` |
 
 `--showtones` is available for Patch and Timbre reports. It automatically
@@ -137,6 +140,10 @@ follows the assigned internal user Tone or Tones and appends their reports, so
 you can understand a complete sound configuration in one command. Full
 parameters, valid identifiers, and example output are in the
 [diagnostic report guide](docs/reports.md).
+
+Omit `--patch`, `--timbre`, or `--tone` to list every complete, populated
+record of that type in the input. Add the option only when you want the full
+parameter report for one selected record.
 
 ## Choosing the right tool
 

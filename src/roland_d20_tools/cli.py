@@ -113,9 +113,9 @@ def parser() -> argparse.ArgumentParser:
     report_commands = report_parser.add_subparsers(dest="report", required=True, title="reports")
     for name, help_text, example in (
         ("system", "decode 10H global System settings", "d20-tools report system D20BACKUP.mid"),
-        ("patch", "decode 07H Patch records", "d20-tools report patch TESTSND.333 --patch 1 --showtones"),
-        ("timbre", "decode 05H Timbre records", "d20-tools report timbre TESTSND.333 --timbre A-11 --showtones"),
-        ("tone", "decode 08H permanent or 04H temporary Tone records", "d20-tools report tone D20BACKUP.mid --tone i01"),
+        ("patch", "list or decode 07H Patch records", "d20-tools report patch TESTSND.333 --patch 1 --showtones"),
+        ("timbre", "list or decode 05H Timbre records", "d20-tools report timbre TESTSND.333 --timbre A-11 --showtones"),
+        ("tone", "list or decode 08H permanent or 04H temporary Tone records", "d20-tools report tone D20BACKUP.mid --tone i01"),
         ("rhythm", "decode 09H Rhythm Setup assignments", "d20-tools report rhythm TESTRHY.444"),
     ):
         report = report_commands.add_parser(
@@ -126,13 +126,13 @@ def parser() -> argparse.ArgumentParser:
         )
         report.add_argument("input", type=Path, help="source .333/.444, .mid/.midi, or raw .syx D-20 data")
         if name == "patch":
-            report.add_argument("--patch", type=int, metavar="1..128", help="show one complete Patch record")
+            report.add_argument("--patch", type=int, metavar="1..128", help="show one complete Patch record (omit to list populated Patches)")
             report.add_argument("--showtones", action="store_true", help="append assigned editable Tone configuration (requires --patch)")
         elif name == "timbre":
-            report.add_argument("--timbre", metavar="A-11..A-88 | B-11..B-88", help="show one complete Timbre")
+            report.add_argument("--timbre", metavar="A-11..A-88 | B-11..B-88", help="show one complete Timbre (omit to list populated Timbres)")
             report.add_argument("--showtones", action="store_true", help="append assigned editable Tone configuration (requires --timbre)")
         elif name == "tone":
-            report.add_argument("--tone", type=parse_internal_tone, metavar="i01..i64", help="show one complete internal/user Tone record")
+            report.add_argument("--tone", type=parse_internal_tone, metavar="i01..i64", help="show one complete internal/user Tone record (omit to list populated Tones)")
     commands.add_parser(
         "song",
         help="Song .222 conversion (work in progress)",
