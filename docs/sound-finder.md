@@ -1,9 +1,9 @@
 # Sound finder (`d20-tools find`)
 
-`d20-tools find` searches a folder and every subfolder for named D-20 Tones,
-Timbres, and Patches. It accepts standard MIDI (`.mid` and `.midi`), raw SysEx
-(`.syx`), native Sound (`.333`), and native All (`.111`) files. It only reads
-files; no source file is changed.
+`d20-tools find` searches a folder and its subfolders for named D-20 Tones,
+Timbres, and Patches. It reads standard MIDI (`.mid` and `.midi`), raw SysEx
+(`.syx`), native Sound (`.333`), and native All (`.111`) files without changing
+them.
 
 ```sh
 d20-tools find ~/D20-library "Star Synth"
@@ -54,6 +54,6 @@ d20-tools find ~/D20-library StarSynth --type tone --format json
 d20-tools find ~/D20-library StarSynth --format csv > starsynth.csv
 ```
 
-Files which do not contain complete compatible D-20 name data are skipped and
-counted in the final summary. Native Rhythm and Song files are intentionally
-not searched: they do not store the editable Patch, Timbre, or Tone memories.
+Files without complete compatible D-20 name data are skipped and counted in the
+final summary. Native Rhythm and Song files are intentionally not searched:
+they do not store editable Patch, Timbre, or Tone memory.

@@ -19,12 +19,12 @@ d20-tools d110 D20BACKUP.mid D110-SNDRHY.syx --report D110-SNDRHY.html --report-
 ```
 
 The source must be a complete D-20 MIDI or raw SysEx dump containing permanent
-user Tone (`08H`), Timbre (`05H`), and Rhythm Setup (`09H`) areas. The output is
-raw D-110 SysEx and a report can be Markdown (default), HTML, JSON, or CSV.
-Open Markdown with a Markdown previewer; open an HTML report directly in a browser.
-When `--report` is supplied, the command writes the full comparison to that
-file and prints only a short completion summary to the terminal. Without
-`--report`, the Markdown comparison is printed to the terminal.
+user Tone (`08H`), Timbre (`05H`), and Rhythm Setup (`09H`) areas. The output
+is raw D-110 SysEx. Reports may be Markdown (default), HTML, JSON, or CSV;
+open Markdown in a previewer and HTML directly in a browser. With `--report`,
+the full comparison is written to that file and the terminal receives only a
+short completion summary. Without it, the Markdown comparison is printed to
+the terminal.
 
 | D-20 source | D-110 destination | Handling |
 | --- | --- | --- |
@@ -41,19 +41,15 @@ named Tone or its active synthesis settings, so this prevents D-20-only or
 undefined trailing data from being sent to the D-110.
 
 The D-110 Rhythm Setup is battery-backed internal memory and is included in
-the D-110's documented MIDI bulk-transfer facility. The experimental report
-lists the exact destination blocks and every non-direct substitution. It
-contains two 32-row shared D-20/D-110 Tone tables (`i01-i32` and `i33-i64`),
-then all 128 Timbres as A and B tables (`A-11` through `A-88`, then `B-11`
-through `B-88`). The HTML version places each pair of tables side by side.
-Each Timbre shows its common Tone
-reference/name, copied parameters, and the explicit `D-20 reverb → D-110
-output` change. The Rhythm-key comparison lists all 85 keys (MIDI notes
-24-108) and uses one shared Tone reference/name because those values are
-identical on both units. Internal `i01-i64` names come from the transferred
-Tone data; preset `r`, `a`, and `b` names use the built-in reference tables.
-JSON includes `tones`, `timbres`, and `rhythm`; CSV contains rows from all
-three sections.
+the D-110's documented MIDI bulk-transfer facility. The report lists the
+destination blocks and every non-direct substitution. It has two 32-row shared
+D-20/D-110 Tone tables (`i01-i32` and `i33-i64`) and all 128 Timbres in A and
+B tables (`A-11` through `A-88`, then `B-11` through `B-88`). HTML places each
+pair side by side. Timbre and Rhythm rows show a Tone identifier and Tone name;
+internal `i01-i64` names come from transferred data, while preset `r`, `a`,
+and `b` names use built-in reference tables. The Rhythm comparison covers all
+85 keys (MIDI notes 24-108). JSON has `tones`, `timbres`, and `rhythm`; CSV
+contains rows from all three sections.
 
 ### HTML report excerpt
 

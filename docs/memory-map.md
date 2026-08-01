@@ -1,9 +1,10 @@
 # D-20 memory-address reference
 
-This is the address map implemented by the converters and diagnostic reports.
-It is a source-derived engineering reference, not a replacement for Roland's
-manual. A SysEx DT1 address has three 7-bit bytes: `MSB MID LSB`. Within an
-area, the byte offset is `MID × 128 + LSB`; all ranges below are inclusive.
+This engineering reference records the address map implemented by the
+converters and reports. It is source-derived and complements, rather than
+replaces, Roland's manuals. A SysEx DT1 address has three 7-bit bytes:
+`MSB MID LSB`. Within an area, the byte offset is `MID × 128 + LSB`; all ranges
+below are inclusive.
 
 ## SysEx areas
 
@@ -19,9 +20,10 @@ area, the byte offset is `MID × 128 + LSB`; all ranges below are inclusive.
 | `0CH 00 00–03 75` | 502 | Rhythm converter; compact inspection | Sequencer Header. |
 | `10H 00 00–00 31` | 50 | System report; compact inspection | Global System settings. |
 
-`inspect` recognises each row but only prints message counts. The five `report`
-decoders read `04H/05H/07H/08H/09H/10H`; `0AH/0BH/0CH` are preserved by the
-Rhythm converter but are not yet interpreted as musical events.
+`inspect` recognises every area. Its terminal view prints message counts; its
+structured report inventories the recognised areas. The five `report` decoders
+read `04H/05H/07H/08H/09H/10H`; `0AH/0BH/0CH` are preserved by the Rhythm
+converter but are not yet interpreted as musical events.
 
 Preset A and Preset B Tone definitions are fixed ROM content, not editable
 DT1 Tone-memory records. The Tone report therefore exposes only internal/user

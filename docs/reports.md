@@ -1,10 +1,9 @@
 # Diagnostic reports (`d20-tools report`)
 
-The five reports are read-only decoders for a D-20 Standard MIDI (`.mid` or
-`.midi`), raw SysEx (`.syx`), native Sound (`.333`), or native Rhythm (`.444`)
-file. They validate every Roland D-20 DT1 frame and checksum before decoding;
-native files are validated directly before their data is decoded. They print
-to the terminal and never create, change, or transmit a file.
+The five reports decode D-20 data without changing or transmitting a file.
+They accept Standard MIDI (`.mid` or `.midi`), raw SysEx (`.syx`), native Sound
+(`.333`), or native Rhythm (`.444`) files. Every DT1 frame and checksum is
+validated before decoding; native files are validated directly.
 
 The command structure is intentionally nested:
 
@@ -45,13 +44,9 @@ d20-tools report tone MY_SOUNDS.333 --tone i12
 d20-tools report rhythm MY_RHYTHMS.444
 ```
 
-For Patch, Timbre, and Tone reports, no selection option means “list all”: the
-command prints every complete, populated Patch, Timbre, or internal/user Tone
-in the input. Supply `--patch`, `--timbre`, or `--tone` to decode one selected
-record in detail.
-
-The option follows the input filename. This avoids ambiguity and makes it easy
-to paste the command shown by `d20-tools report REPORT --help`.
+For Patch, Timbre, and Tone reports, omitting the selection option lists every
+complete, populated record. Supply `--patch`, `--timbre`, or `--tone` after the
+input filename to decode one record in detail.
 
 A `.333` contains Sound/Timbre/Patch/Tone data, so it can be used directly
 with `report tone`, `report timbre`, and `report patch` (including
@@ -64,11 +59,11 @@ numbered `11` through `88`. `I` (internal) and `C` (memory card) are a
 separate storage-mode choice on the instrument; they are not Timbre-bank
 labels, so they are deliberately not accepted as report identifiers.
 
-`--showtones` requires a selected `--patch` or `--timbre`. It embeds the same
-detail that `report tone --tone i01` would show for an assigned internal/user
-Tone. Preset A/B and Rhythm Tones are fixed content, so their synthesis
-settings are not carried in a dump; the report identifies them rather than
-inventing a configuration.
+`--showtones` requires a selected `--patch` or `--timbre`. It appends the same
+detail as `report tone --tone i01` for an assigned internal/user Tone. Preset
+A/B and Rhythm Tones are fixed content, so their synthesis settings are not
+carried in a dump; the report identifies them rather than inventing a
+configuration.
 
 ## Tone inspection scope
 

@@ -19,13 +19,12 @@ mysterious ways of the D-20.
 Safe, local inspection and conversion tools for Roland D-20 SysEx and disk
 files. Nothing is uploaded: the tools read and write files on your computer.
 
-Version 0.2 centres on `report`: detailed, read-only decoding of the System,
-Patch, Timbre, Tone, and Rhythm settings stored in standard MIDI, Raw SysEx,
-Sound (`.333`), and Rhythm (`.444`) D-20 files. It also provides file
-identification, named-sound search, and Sound/Rhythm conversion. `inspect`
-identifies native Song (`.222`) and All (`.111`) containers from their contents.
-The Song and All conversion commands remain work-in-progress placeholders; they
-do not modify or convert files yet.
+Version 0.2 provides detailed, read-only reports for D-20 System, Patch,
+Timbre, Tone, and Rhythm data; file identification; named-sound search; and
+Sound/Rhythm conversion. It accepts standard MIDI, raw SysEx, and the native
+D-20 file types described below. `inspect` also identifies native Song (`.222`)
+and All (`.111`) containers by their contents. Song and All conversion remain
+work-in-progress placeholders and do not modify files.
 
 ## Install
 
@@ -47,34 +46,22 @@ make coverage
 make package
 ```
 
-## Commands
+## Quick start
 
 ```sh
 d20-tools --version
-d20-tools report patch TESTSND.333
-d20-tools report timbre TESTSND.333
-d20-tools report tone TESTSND.333
-d20-tools report patch D20BACKUP.mid --patch 1
-d20-tools report patch TESTSND.333 --patch 1 --showtones
-d20-tools report timbre TESTSND.333 --timbre A-11 --showtones
-d20-tools report tone D20BACKUP.syx --tone i01
 d20-tools inspect D20BACKUP.mid
-d20-tools inspect TESTSND.333
-d20-tools inspect TESTALL.111 --report TESTALL-inspection.html --report-format html
-d20-tools inspect D20BACKUP.mid --report inspection.json --report-format json
+d20-tools report patch D20BACKUP.mid --patch 1 --showtones
 d20-tools find ~/D20-library "Star Synth"
-d20-tools find ~/D20-library StarSynth --type tone --format json
-d20-tools doctor
 d20-tools sound TESTSND.333 TESTSND.mid
-d20-tools sound TESTSND.mid TESTSND.333
 d20-tools rhythm TESTRHY.444 TESTRHY.syx
 d20-tools d110 D20BACKUP.mid D110-SNDRHY.syx --report D110-SNDRHY.md
-d20-tools d110 D20BACKUP.mid D110-SNDRHY.syx --report D110-SNDRHY.html --report-format html
-d20-tools rhythm TESTRHY.syx TESTRHY.444
 ```
 
-For the experimental `d110` command, `--report` writes the full validation
-table to the selected Markdown or HTML file and keeps terminal output concise.
+Run `d20-tools <command> --help` for every option and an example. The
+experimental `d110` command writes its full validation table to `--report` and
+keeps terminal output concise. Reports can be Markdown (the default), HTML,
+JSON, or CSV.
 
 Existing output files are protected. Add `--force` only when you intend to
 replace the destination.
@@ -106,6 +93,7 @@ flowchart LR
     B <--> F[Raw SysEx .syx]
     D <--> E
     D <--> F
+    K --> N[d20-tools d110\nExperimental D-110 SysEx]
     G[.222 Song file] --> H[d20-tools song\nWIP]
     I[.111 All file] --> J[d20-tools all\nWIP]
     I --> M
@@ -115,25 +103,15 @@ See [the architecture guide](docs/architecture.md) for the module-level map and
 the [memory-address reference](docs/memory-map.md) for the source-derived D-20
 address and native-file layout tables.
 
-## Inspection scope
+## How to choose a command
 
-`d20-tools inspect` is deliberately brief: it validates a `.333`, `.444`,
-`.mid`, `.midi`, or `.syx` file and prints the number of valid DT1-equivalent
-messages in each recognised area. It also identifies native `.222` Song and
-`.111` All containers from their structure rather than their filename
-extension. Every inspection ends with an explicit file-type declaration. It
-writes no file. Inspection labels a complete MIDI/SysEx backup as `ALL (MIDI
-DUMP)` and a native `.111` container as `ALL (DISK)`. Native Song and All
-inputs also expand their embedded Rhythm or Sound/Rhythm data into the same
-concise area summary. Detailed parameter reports are available through the
-nested `d20-tools report` commands for System, Patch, Timbre, Tone, and Rhythm
-Setup data. All inspection and report commands are read-only.
+Start with `inspect` when you do not know what a file contains. It is
+read-only, validates recognised data, identifies the file type, and gives a
+short area summary. Use `report` when you want the values stored in a specific
+memory area. Both commands leave the source file unchanged.
 
-## Start with `report`
-
-`report` is the main D-20 analysis tool. It reads a dump or native file and
-turns a selected memory location into a clear parameter report; it never writes
-to the source file. Use the report that answers the question you have:
+`report` reads a dump or native file and turns a selected memory location into
+a parameter report:
 
 | Report | What it shows | Example |
 | --- | --- | --- |
@@ -143,32 +121,22 @@ to the source file. Use the report that answers the question you have:
 | `tone` | A list of internal user Tones, or one Tone including PCM waveform names | `d20-tools report tone D20BACKUP.syx --tone i01` |
 | `rhythm` | Rhythm Setup parameters | `d20-tools report rhythm TESTRHY.444` |
 
-`--showtones` is available for Patch and Timbre reports. It automatically
-follows the assigned internal user Tone or Tones and appends their reports, so
-you can understand a complete sound configuration in one command. Full
-parameters, valid identifiers, and example output are in the
-[diagnostic report guide](docs/reports.md).
+`--showtones` on a selected Patch or Timbre follows its assigned internal/user
+Tone or Tones and appends their reports. The [diagnostic report
+guide](docs/reports.md) has all options, identifiers, and sample output.
 
 Omit `--patch`, `--timbre`, or `--tone` to list every complete, populated
 record of that type in the input. Add the option only when you want the full
 parameter report for one selected record.
 
-## Choosing the right tool
-
-After identifying a file with `inspect`, use the command that matches what you
-want to do. Every command has built-in help with at least one example:
-
-```sh
-d20-tools <command> --help
-```
-
 ### Identify a dump or disk file
 
-`inspect` is the quick companion to `report`. It recognises D-20 SysEx areas
-and native containers, counts the valid messages it finds, and tells you
-whether the input is a Sound, Rhythm, Song, or All file. It does not alter the
-file. Run it when you are unsure what an input contains, then use `report` to
-decode the area you care about.
+Use `inspect` for a compact terminal summary, or add `--report FILE` for a
+complete Markdown, HTML, JSON, or CSV inventory. It labels a complete MIDI or
+SysEx backup `ALL (MIDI DUMP)` and a native `.111` container `ALL (DISK)`.
+Native Song and All inputs include their embedded Rhythm or Sound/Rhythm area
+summary. See [the SysEx inspector guide](docs/sysex-inspector.md) for exact
+coverage and limitations.
 
 ```sh
 d20-tools inspect ~/D20-library/D20BACKUP.mid

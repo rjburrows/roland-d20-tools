@@ -17,13 +17,11 @@ d20-tools inspect D20BACKUP.mid --report inspection.json --report-format json
 d20-tools inspect D20BACKUP.mid --report inspection.csv --report-format csv
 ```
 
-Without `--report`, the command writes its compact summary to the terminal. A
-successful report ends with an explicit type
-declaration. It distinguishes `ALL (MIDI DUMP)`—a complete transfer containing
-the System area—from `ALL (DISK)`—a native `.111` disk container without that
-separate System area. A native Song file ends with `This is a SONG file.` Song
-recognition uses its fixed size, native type byte, and embedded Rhythm section
-marker—not its `.222` filename extension.
+Without `--report`, the command writes a compact terminal summary that ends
+with an explicit file-type declaration. It distinguishes `ALL (MIDI DUMP)`—a
+complete transfer containing the System area—from `ALL (DISK)`—a native `.111`
+disk container without a separate System area. Song recognition uses its fixed
+size, native type byte, and embedded Rhythm marker, not its `.222` extension.
 
 For a MIDI, SysEx, Sound, or Rhythm input, the report also contains the source
 filename, total number of valid DT1 messages, and a count for every area found,
@@ -35,16 +33,14 @@ embedded Rhythm areas (78 message equivalents). A native All contains embedded
 Sound and Rhythm areas (165 message equivalents); its disk layout does not
 contain a separate `10H` System area.
 
-Use `--report FILE` for a structured, read-only inventory in Markdown (default),
-self-contained HTML (`--report-format html`), JSON, or CSV. JSON stores each
-table's title, columns, and rows; CSV uses one `section` column and a stable
-superset of the report fields. It includes every recognised
-memory area, complete Tone/Timbre/Patch/Rhythm/System records that can be
-safely listed, and explicit inventory entries for Pattern, Rhythm Track, and
-Sequencer Header. Existing output files are protected unless `--force` is
-given. This broader overview complements the nested [`report`](reports.md)
-commands, which remain better suited to reading detailed parameters in the
-terminal.
+Use `--report FILE` for a structured, read-only inventory in Markdown
+(default), self-contained HTML (`--report-format html`), JSON, or CSV. JSON
+stores each table's title, columns, and rows; CSV uses a `section` column and a
+stable superset of report fields. The inventory includes every recognised
+memory area, complete records that can be safely listed, and Pattern, Rhythm
+Track, and Sequencer Header entries. Existing output files are protected unless
+`--force` is supplied. Use the nested [`report`](reports.md) commands when you
+want full parameter detail in the terminal.
 
 The HTML report uses the same compact paired-table approach as the experimental
 D-110 validation report: internal Tones are split into `i01-i32` and `i33-i64`,
