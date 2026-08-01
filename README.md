@@ -19,7 +19,7 @@ mysterious ways of the D-20.
 Safe, local inspection and conversion tools for Roland D-20 SysEx and disk
 files. Nothing is uploaded: the tools read and write files on your computer.
 
-Version 0.1 centres on `report`: detailed, read-only decoding of the System,
+Version 0.2 centres on `report`: detailed, read-only decoding of the System,
 Patch, Timbre, Tone, and Rhythm settings stored in standard MIDI, Raw SysEx,
 Sound (`.333`), and Rhythm (`.444`) D-20 files. It also provides file
 identification, named-sound search, and Sound/Rhythm conversion. `inspect`
@@ -60,14 +60,21 @@ d20-tools report timbre TESTSND.333 --timbre A-11 --showtones
 d20-tools report tone D20BACKUP.syx --tone i01
 d20-tools inspect D20BACKUP.mid
 d20-tools inspect TESTSND.333
+d20-tools inspect TESTALL.111 --report TESTALL-inspection.html --report-format html
+d20-tools inspect D20BACKUP.mid --report inspection.json --report-format json
 d20-tools find ~/D20-library "Star Synth"
 d20-tools find ~/D20-library StarSynth --type tone --format json
 d20-tools doctor
 d20-tools sound TESTSND.333 TESTSND.mid
 d20-tools sound TESTSND.mid TESTSND.333
 d20-tools rhythm TESTRHY.444 TESTRHY.syx
+d20-tools d110 D20BACKUP.mid D110-SNDRHY.syx --report D110-SNDRHY.md
+d20-tools d110 D20BACKUP.mid D110-SNDRHY.syx --report D110-SNDRHY.html --report-format html
 d20-tools rhythm TESTRHY.syx TESTRHY.444
 ```
+
+For the experimental `d110` command, `--report` writes the full validation
+table to the selected Markdown or HTML file and keeps terminal output concise.
 
 Existing output files are protected. Add `--force` only when you intend to
 replace the destination.
@@ -75,11 +82,12 @@ replace the destination.
 | Command | Status | Documentation |
 | --- | --- | --- |
 | `d20-tools report` | Ready — detailed System, Patch, Timbre, Tone, and Rhythm reports | [Diagnostic reports](docs/reports.md) |
-| `d20-tools inspect` | Ready — compact DT1 area summary | [SysEx inspector](docs/sysex-inspector.md) |
+| `d20-tools inspect` | Ready — compact DT1 area summary or structured Markdown/HTML inventory | [SysEx inspector](docs/sysex-inspector.md) |
 | `d20-tools find` | Ready — recursive named-sound search | [Sound finder](docs/sound-finder.md) |
 | `d20-tools doctor` | Ready — installed-version and capability summary | [Doctor](docs/doctor.md) |
 | `d20-tools sound` | Ready | [Sound converter](docs/sound-converter.md) |
 | `d20-tools rhythm` | Ready | [Rhythm converter](docs/rhythm-converter.md) |
+| `d20-tools d110` | **Experimental** — one-way D-20 to D-110 conversion; verify the report before use | [D-110 experimental converter](docs/d110-experimental.md) |
 | `d20-tools song` | WIP placeholder | [Song WIP](docs/song-wip.md) |
 | `d20-tools all` | WIP placeholder | [All-file WIP](docs/all-wip.md) |
 

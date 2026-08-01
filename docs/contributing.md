@@ -17,7 +17,7 @@ adding superficial tests. Do not add private disk images or copyrighted factory
 content as fixtures. The optional local regression tests are designed for that
 purpose.
 
-For a release, update the version in `pyproject.toml` and `CHANGELOG.md`, pass
+For a release, update the version in `src/roland_d20_tools/__init__.py` and `CHANGELOG.md`, pass
 the local checks and CI, tag the commit, and create a GitHub Release from that
 tag. Install the wheel into a fresh virtual environment and confirm
 `d20-tools --help` before publishing.

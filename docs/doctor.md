@@ -12,11 +12,11 @@ Example output:
 
 ```text
 D-20 Tools doctor
-Version: 0.1.0
+Version: 0.2.0
 Python: 3.10.0 (Darwin 24.0.0)
 Mido: 1.3.3
 Supported input: .mid, .midi, .syx, .333, .444, .111, .222
-Ready commands: inspect, find, report, sound, rhythm
+Ready commands: inspect, find, report, sound, rhythm; experimental: d110
 Song and All conversion: work in progress
 Live MIDI input/output: not included
 ```

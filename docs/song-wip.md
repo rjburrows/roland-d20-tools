@@ -2,7 +2,7 @@
 
 Song files use the `.222` extension. The command is included so the public
 interface has a stable place for future support, but it intentionally performs
-no conversion in version 0.1 and exits with a clear WIP message.
+no conversion in version 0.2 and exits with a clear WIP message.
 
 `d20-tools inspect INPUT` already identifies a native Song container from its
 validated structure, including its embedded Rhythm section; this does not rely

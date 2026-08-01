@@ -1,9 +1,19 @@
 # Changelog
 
-All notable changes to this project are documented here.
+## [0.2.0] - 2026-07-31
 
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project uses [Semantic Versioning](https://semver.org/).
+### Added
+
+- Experimental one-way D-20 to D-110 SysEx conversion, with validated Tone,
+  Timbre, and Rhythm Setup output plus Markdown, HTML, JSON, and CSV reports.
+- Structured `inspect` reports in Markdown, HTML, JSON, and CSV, including
+  mixed Sound/Rhythm captures and native Song-region inventory.
+
+### Changed
+
+- Expanded report tables for Tones, Timbres, Patches, Rhythm Setup, and
+  incomplete-data visibility.
+- Clarified that D-110 output requires real-hardware validation.
 
 ## [0.1.0] - 2026-07-30
 
