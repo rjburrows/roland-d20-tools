@@ -55,6 +55,16 @@ Tone data; preset `r`, `a`, and `b` names use the built-in reference tables.
 JSON includes `tones`, `timbres`, and `rhythm`; CSV contains rows from all
 three sections.
 
+### HTML report excerpt
+
+The browser report presents the A and B Timbre tables side by side. A Timbre
+row looks like this (the values below are representative):
+
+| Timbre | Tone | Tone name | Shift | Fine | Bend | Assign | Reverb → output | Status |
+|---|---|---|---:|---:|---:|---:|---|---|
+| A-11 | a01 | AcouPiano 1 | +0 | +0 | 2 | 1 | ON → MIX | D-20 reverb replaced |
+| A-12 | i01 | TouchPiano | +0 | +0 | 2 | 1 | OFF → MIX | Direct fields copied |
+
 Not converted: D-20 Patches, Rhythm patterns, Rhythm track, and sequencer
 header. The D-110's eight-part Patch architecture is not equivalent to D-20
 Patch memory, so no approximation is made.

@@ -52,6 +52,16 @@ Timbres into A/B banks, and Patches into `1-64` and `65-128`. Markdown contains
 the same tables in sequence. A MIDI or SysEx capture that combines Sound and
 Rhythm memory in one track is labelled `MIXED` in both report formats.
 
+### HTML report excerpt
+
+The browser report places the A and B Timbre inventories side by side. The
+following is the shape of an inspected D-20 Timbre row:
+
+| Timbre | Source | Tone | Tone name | Shift | Fine | Bend | Assign | Reverb |
+|---|---|---|---|---:|---:|---:|---:|---|
+| A-11 | Preset A | a01 | AcouPiano 1 | +0 | +0 | 2 | 1 | ON |
+| A-12 | User | i01 | TouchPiano | +0 | +0 | 2 | 1 | OFF |
+
 For a native Song (`.222`) or an All (`.111`) file, both the compact summary
 and structured report include the native Song event-stream region's size and
 non-zero-byte count. Tempo and track count are deliberately shown as an
