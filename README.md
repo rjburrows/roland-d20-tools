@@ -10,7 +10,7 @@ Special thanks to [David Given](https://github.com/davidgiven) and
 to read and write data on D-20 floppy disks.
 
 And a heartfelt thanks and eternal gratitude to
-[Trond Larsen](https://github.com/trondl909) for keeping the project alive when
+[Trond Gribbestad Lund](https://github.com/trondl909) for keeping the project alive when
 it felt like I might be the only person in the world who still cared about the
 mysterious ways of the D-20.
 
