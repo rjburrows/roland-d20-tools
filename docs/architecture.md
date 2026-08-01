@@ -8,9 +8,11 @@ flowchart TD
     CLI --> D[Detailed diagnostic reports]
     CLI --> S[Sound converter]
     CLI --> R[Rhythm converter]
+    CLI --> X[Experimental D-20 to D-110 converter]
     CLI --> W[Song / All placeholders]
     S --> Core[Shared D-20 validation core]
     R --> Core
+    X --> Core
     D --> Core
     F --> Core
     Core --> Native[Native .333 / .444 files]
@@ -26,6 +28,8 @@ text and note helpers, atomic output replacement, and native-file adaptation
 for the read-only inspector and reports. `sound.py` and `rhythm.py` own only
 the rules for their respective native containers.
 `reports.py` decodes complete records only; it never substitutes missing bytes.
+`d110.py` produces only validated D-110 SysEx and comparison reports; it is
+kept separate because D-110 hardware round-trip validation is still pending.
 The CLI dispatches one explicit subcommand and never guesses a file type. See
 the [memory-address reference](memory-map.md) for the layouts used by each
 module.

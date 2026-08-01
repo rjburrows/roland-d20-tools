@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 import sys
 
-from . import __version__, doctor, finder, inspect, reports, rhythm, sound
+from . import __version__, d110, doctor, finder, inspect, reports, rhythm, sound
 from .core import D20Error, parse_device_id
 
 
@@ -80,6 +80,18 @@ def parser() -> argparse.ArgumentParser:
         epilog=examples("d20-tools rhythm TESTRHY.444 TESTRHY.syx"),
     )
     add_converter_arguments(rhythm_parser, "Rhythm (.444), MIDI, or SysEx")
+    d110_parser = commands.add_parser(
+        "d110",
+        help="EXPERIMENTAL: convert a complete D-20 dump to D-110 SysEx",
+        description="EXPERIMENTAL and opt-in: convert common D-20 user Tone, Timbre, and Rhythm Setup data to D-110 raw SysEx. Review the generated validation report before sending it to hardware.",
+        epilog=examples("d20-tools d110 D20BACKUP.mid D110-SNDRHY.syx --report D110-SNDRHY.md"),
+    )
+    d110_parser.add_argument("input", type=Path, help="source complete D-20 MIDI or SysEx dump")
+    d110_parser.add_argument("output", type=Path, help="destination D-110 raw SysEx (.syx) file")
+    d110_parser.add_argument("--device-id", default="0x10", help="Roland D-110 device ID (default: 0x10)")
+    d110_parser.add_argument("--force", action="store_true", help="replace an existing output or report")
+    d110_parser.add_argument("--report", type=Path, help="write the full experimental validation report to this file")
+    d110_parser.add_argument("--report-format", choices=("markdown", "html", "json", "csv"), default="markdown", help="validation report format (default: markdown)")
     inspect_parser = commands.add_parser(
         "inspect",
         help="identify native files or summarize D-20 SysEx data",
@@ -87,6 +99,9 @@ def parser() -> argparse.ArgumentParser:
         epilog=examples("d20-tools inspect D20BACKUP.mid", "d20-tools inspect TESTSONG.222"),
     )
     inspect_parser.add_argument("input", type=Path, help="source MIDI, SysEx, or native D-20 file")
+    inspect_parser.add_argument("--report", type=Path, help="write a structured inspection report (Markdown by default)")
+    inspect_parser.add_argument("--report-format", choices=("markdown", "html", "json", "csv"), default="markdown", help="structured report format (default: markdown)")
+    inspect_parser.add_argument("--force", action="store_true", help="replace an existing inspection report")
     find_parser = commands.add_parser(
         "find",
         help="recursively find named Patches, Timbres, or Tones",
@@ -152,10 +167,14 @@ def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     try:
         if args.command in {"song", "all"}:
-            emit(f"The D-20 {args.command.title()} converter is a work in progress and is not available in v0.1.", file=sys.stderr)
+            emit(f"The D-20 {args.command.title()} converter is a work in progress and is not available in v0.2.", file=sys.stderr)
             return 2
         if args.command == "inspect":
-            emit(inspect.report(args.input))
+            if args.report:
+                inspect.write_detailed_report(args.input, args.report, format=args.report_format, force=args.force)
+                emit(f"Inspection report: {args.report}")
+            else:
+                emit(inspect.report(args.input))
             return 0
         if args.command == "find":
             emit(
@@ -179,6 +198,9 @@ def main(argv: list[str] | None = None) -> int:
             emit(result)
             return 0
         device_id = parse_device_id(args.device_id)
+        if args.command == "d110":
+            emit(d110.convert(args.input, args.output, device_id=device_id, force=args.force, report_path=args.report, report_format=args.report_format))
+            return 0
         converter = sound.convert if args.command == "sound" else rhythm.convert
         emit(converter(args.input, args.output, device_id=device_id, force=args.force))
         return 0

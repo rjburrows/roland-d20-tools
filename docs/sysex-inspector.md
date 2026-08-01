@@ -12,15 +12,16 @@ d20-tools inspect MY_SOUNDS.333
 d20-tools inspect MY_RHYTHMS.444
 d20-tools inspect TESTSONG.222
 d20-tools inspect TESTALL.111
+d20-tools inspect TESTALL.111 --report TESTALL-inspection.html --report-format html
+d20-tools inspect D20BACKUP.mid --report inspection.json --report-format json
+d20-tools inspect D20BACKUP.mid --report inspection.csv --report-format csv
 ```
 
-`INPUT` is the only parameter. The command creates no output file and writes
-its report to the terminal. A successful report ends with an explicit type
-declaration. It distinguishes `ALL (MIDI DUMP)`—a complete transfer containing
-the System area—from `ALL (DISK)`—a native `.111` disk container without that
-separate System area. A native Song file ends with `This is a SONG file.` Song
-recognition uses its fixed size, native type byte, and embedded Rhythm section
-marker—not its `.222` filename extension.
+Without `--report`, the command writes a compact terminal summary that ends
+with an explicit file-type declaration. It distinguishes `ALL (MIDI DUMP)`—a
+complete transfer containing the System area—from `ALL (DISK)`—a native `.111`
+disk container without a separate System area. Song recognition uses its fixed
+size, native type byte, and embedded Rhythm marker, not its `.222` extension.
 
 For a MIDI, SysEx, Sound, or Rhythm input, the report also contains the source
 filename, total number of valid DT1 messages, and a count for every area found,
@@ -32,10 +33,37 @@ embedded Rhythm areas (78 message equivalents). A native All contains embedded
 Sound and Rhythm areas (165 message equivalents); its disk layout does not
 contain a separate `10H` System area.
 
-It is useful whether the dump came from MIDI Data Transfer or was produced by
-one of the file converters. It never changes the input file. It is not a
-parameter-by-parameter decoder: use the nested [`report`](reports.md) commands
-for the detailed System, Patch, Timbre, Tone, and Rhythm Setup reports.
+Use `--report FILE` for a structured, read-only inventory in Markdown
+(default), self-contained HTML (`--report-format html`), JSON, or CSV. JSON
+stores each table's title, columns, and rows; CSV uses a `section` column and a
+stable superset of report fields. The inventory includes every recognised
+memory area, complete records that can be safely listed, and Pattern, Rhythm
+Track, and Sequencer Header entries. Existing output files are protected unless
+`--force` is supplied. Use the nested [`report`](reports.md) commands when you
+want full parameter detail in the terminal.
+
+The HTML report uses the same compact paired-table approach as the experimental
+D-110 validation report: internal Tones are split into `i01-i32` and `i33-i64`,
+Timbres into A/B banks, and Patches into `1-64` and `65-128`. Markdown contains
+the same tables in sequence. A MIDI or SysEx capture that combines Sound and
+Rhythm memory in one track is labelled `MIXED` in both report formats.
+
+### HTML report excerpt
+
+The browser report places the A and B Timbre inventories side by side. The
+following is the shape of an inspected D-20 Timbre row:
+
+| Timbre | Source | Tone | Tone name | Shift | Fine | Bend | Assign | Reverb |
+|---|---|---|---|---:|---:|---:|---:|---|
+| A-11 | Preset A | a01 | AcouPiano 1 | +0 | +0 | 2 | 1 | ON |
+| A-12 | User | i01 | TouchPiano | +0 | +0 | 2 | 1 | OFF |
+
+For a native Song (`.222`) or an All (`.111`) file, both the compact summary
+and structured report include the native Song event-stream region's size and
+non-zero-byte count. Tempo and track count are deliberately shown as an
+undecoded placeholder; the tool does not interpret event bytes as music yet.
+The structured report also records whether the Song's embedded Rhythm data was
+expanded to DT1-equivalent areas.
 
 Example native Sound-file result:
 

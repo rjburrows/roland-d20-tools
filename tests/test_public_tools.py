@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 import mido
 
-from roland_d20_tools import __version__, cli, finder, inspect, reports, rhythm, sound
+from roland_d20_tools import __version__, cli, d110, finder, inspect, reports, rhythm, sound
 from roland_d20_tools.core import D20Error, MemoryImage, make_messages, roland_checksum, scan_messages
 
 
@@ -36,6 +36,119 @@ def midi_from_messages(messages: list[mido.Message]) -> mido.MidiFile:
 
 
 class PublicConverterTests(unittest.TestCase):
+    def test_experimental_d110_converter_writes_common_blocks_and_report(self) -> None:
+        tones = complete_image(64 * 256)
+        timbres = complete_image(128 * 8)
+        rhythm_setup = complete_image(85 * 4)
+        tones.data[:10] = b"KICK TONE "
+        timbres.data[:8] = bytes((2, 0, 24, 50, 2, 0, 1, 0))
+        rhythm_setup.data[:8] = bytes((0, 92, 5, 1, 127, 0, 7, 0))
+        messages = [
+            *make_messages(0x08, tones, 0x10),
+            *make_messages(0x05, timbres, 0x10),
+            *make_messages(0x09, rhythm_setup, 0x10),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "complete.mid"
+            destination = Path(directory) / "d110.syx"
+            markdown = Path(directory) / "d110.md"
+            midi_from_messages(messages).save(source)
+            output = d110.convert(source, destination, device_id=0x10, force=False, report_path=markdown)
+            raw = destination.read_bytes()
+            report = markdown.read_text()
+            json_report = d110.report(source, output_name=destination.name, output_messages=70, format="json")
+            csv_report = d110.report(source, output_name=destination.name, output_messages=70, format="csv")
+            html_report = d110.report(source, output_name=destination.name, output_messages=70, format="html")
+        self.assertIn("Created experimental D-110 SysEx", output)
+        self.assertNotIn("Rhythm-key comparison", output)
+        self.assertIn("D-20 reverb omitted", report)
+        self.assertIn("KICK TONE", report)
+        self.assertIn("03 01 10", report)
+        self.assertIn("## Transferred Tones", report)
+        self.assertIn("## Transferred Timbres", report)
+        self.assertIn("| A-11 | i01 | KICK TONE", report)
+        self.assertIn("OFF → MIX", report)
+        self.assertIn("### Tones i01 to i32", report)
+        self.assertIn("### Tones i33 to i64", report)
+        self.assertIn("| i01 | KICK TONE |", report)
+        self.assertIn("| Tone | Tone name |", report)
+        self.assertNotIn("Shared name", report)
+        self.assertNotIn("reserved tail", report)
+        self.assertNotIn("D-20 tone | D-110 tone", report)
+        self.assertIn('"experimental": true', json_report)
+        self.assertIn('"tones": [', json_report)
+        self.assertIn('"timbres": [', json_report)
+        self.assertTrue(csv_report.startswith("section,target,note,tone,tone_name"))
+        self.assertIn("timbre,A-11,,i01,KICK TONE", csv_report)
+        self.assertTrue(html_report.startswith("<!doctype html>"))
+        self.assertIn("<table>", html_report)
+        self.assertIn('class="timbres"', html_report)
+        self.assertIn('class="tones"', html_report)
+        self.assertIn("Tones i01 to i32", html_report)
+        self.assertIn("Tones i33 to i64", html_report)
+        self.assertIn("Timbres A (A-11 to A-88)", html_report)
+        self.assertIn("Timbres B (B-11 to B-88)", html_report)
+        self.assertIn("D-20 reverb omitted", html_report)
+        self.assertIn("KICK TONE", html_report)
+        frames = [frame for frame in raw.split(b"\xf0") if frame]
+        self.assertEqual(len(frames), 70)  # 64 Tone + 4 Timbre + 2 Rhythm messages.
+        rhythm_frames = [frame for frame in frames if frame[4:7] in (bytes((3, 1, 16)), bytes((3, 3, 16)))]
+        self.assertEqual(len(rhythm_frames), 2)
+        self.assertEqual(rhythm_frames[0][7:11], bytes((0, 92, 5, 0)))
+
+    def test_experimental_d110_cli_keeps_report_table_out_of_console_when_saved(self) -> None:
+        tones = complete_image(64 * 256)
+        timbres = complete_image(128 * 8)
+        rhythm_setup = complete_image(85 * 4)
+        messages = [*make_messages(0x08, tones, 0x10), *make_messages(0x05, timbres, 0x10), *make_messages(0x09, rhythm_setup, 0x10)]
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "complete.mid"
+            destination = Path(directory) / "d110.syx"
+            report = Path(directory) / "d110.html"
+            midi_from_messages(messages).save(source)
+            output = io.StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(cli.main(["d110", str(source), str(destination), "--report", str(report), "--report-format", "html"]), 0)
+        self.assertIn("Created experimental D-110 SysEx", output.getvalue())
+        self.assertIn("Validation report:", output.getvalue())
+        self.assertNotIn("Rhythm-key comparison", output.getvalue())
+
+    def test_experimental_d110_converter_requires_complete_common_data(self) -> None:
+        tones = complete_image(64 * 256)
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "partial.mid"
+            destination = Path(directory) / "d110.syx"
+            midi_from_messages(make_messages(0x08, tones, 0x10)).save(source)
+            with self.assertRaisesRegex(D20Error, "Timbre memory is incomplete"):
+                d110.convert(source, destination, device_id=0x10, force=False)
+
+    def test_experimental_d110_validator_rejects_bad_memory_map_and_values(self) -> None:
+        tones = complete_image(64 * 256)
+        timbres = complete_image(128 * 8)
+        rhythm_setup = complete_image(85 * 4)
+        messages = [
+            *make_messages(0x08, tones, 0x10),
+            *make_messages(0x05, timbres, 0x10),
+        ]
+        # Use the documented D-110 Rhythm Setup base address, not D-20 area 09.
+        import mido
+
+        payload = rhythm_setup.data
+        data = [0x41, 0x10, 0x16, 0x12, 0x03, 0x01, 0x10, *payload[:256]]
+        messages.append(mido.Message("sysex", data=[*data, roland_checksum(data[4:])]))
+        data = [0x41, 0x10, 0x16, 0x12, 0x03, 0x03, 0x10, *payload[256:]]
+        messages.append(mido.Message("sysex", data=[*data, roland_checksum(data[4:])]))
+        d110.validate_messages(messages)
+        bad_map = list(messages)
+        bad_map[-1] = mido.Message("sysex", data=[0x41, 0x10, 0x16, 0x12, 0x03, 0x03, 0x11, *payload[256:], roland_checksum((0x03, 0x03, 0x11, *payload[256:]))])
+        with self.assertRaisesRegex(D20Error, "address map"):
+            d110.validate_messages(bad_map)
+        bad_rhythm = bytearray(payload)
+        bad_rhythm[1] = 101
+        data = [0x41, 0x10, 0x16, 0x12, 0x03, 0x01, 0x10, *bad_rhythm[:256]]
+        bad_values = [*messages[:-2], mido.Message("sysex", data=[*data, roland_checksum(data[4:])]), messages[-1]]
+        with self.assertRaisesRegex(D20Error, "output level"):
+            d110.validate_messages(bad_values)
     def test_nested_report_commands_validate_and_decode_complete_records(self) -> None:
         system = complete_image(50)
         patches = complete_image(128 * 38)
@@ -299,7 +412,25 @@ class PublicConverterTests(unittest.TestCase):
             song_output = inspect.report(song_path)
             self.assertIn("Valid messages: 78", song_output)
             self.assertIn("0AH  Rhythm Pattern: 64 message(s)", song_output)
+            self.assertIn("Song event stream: 14,848 bytes", song_output)
+            self.assertIn("tempo and track count not decoded", song_output)
             self.assertTrue(song_output.endswith("This is a SONG file."))
+            song_report = root / "song-report.html"
+            output = io.StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(cli.main(["inspect", str(song_path), "--report", str(song_report), "--report-format", "html"]), 0)
+            rendered_song = song_report.read_text()
+            self.assertIn("Native Song data", rendered_song)
+            self.assertIn("Tempo / track count", rendered_song)
+            self.assertIn("Rhythm Setup", rendered_song)
+            self.assertIn("Undecoded data", rendered_song)
+            self.assertIn("Inspection report:", output.getvalue())
+            json_report, csv_report = root / "song-report.json", root / "song-report.csv"
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(cli.main(["inspect", str(song_path), "--report", str(json_report), "--report-format", "json"]), 0)
+                self.assertEqual(cli.main(["inspect", str(song_path), "--report", str(csv_report), "--report-format", "csv"]), 0)
+            self.assertEqual(json.loads(json_report.read_text())["inspection_type"], "SONG")
+            self.assertTrue(csv_report.read_text().startswith("section,area,meaning"))
 
             all_file = bytearray(inspect.ALL_FILE_SIZE)
             all_file[2], all_file[0x10] = 0x03, 0x01
@@ -311,11 +442,39 @@ class PublicConverterTests(unittest.TestCase):
             all_output = inspect.report(all_path)
             self.assertIn("Valid messages: 165", all_output)
             self.assertIn("08H  Tone: 64 message(s)", all_output)
+            self.assertIn("Song event stream: 14,848 bytes", all_output)
             self.assertNotIn("10H  System", all_output)
             self.assertTrue(all_output.endswith("This is an ALL (DISK) file."))
+            all_report = inspect.detailed_report(all_path)
+            self.assertIn("## Native Song data", all_report)
+            self.assertIn("embedded Song region", all_report)
             finder_output = finder.search(root, "all finder", match_type="tone", exact=True)
             self.assertIn(str(all_path.resolve()), finder_output)
             self.assertIn("Tone i01: ALL FINDER", finder_output)
+
+    def test_structured_inspect_report_identifies_combined_sound_and_rhythm_dump(self) -> None:
+        tones = complete_image(64 * 256)
+        timbres = complete_image(128 * 8)
+        patches = complete_image(128 * 38)
+        setup = complete_image(85 * 4)
+        pattern = complete_image(16_384)
+        track = complete_image(2_432)
+        sequencer = complete_image(502)
+        tones.data[:10] = b"MIXED TONE"
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "mixed.mid"
+            midi_from_messages([*make_messages(0x05, timbres, 0x10), *make_messages(0x07, patches, 0x10), *make_messages(0x08, tones, 0x10), *make_messages(0x09, setup, 0x10), *make_messages(0x0A, pattern, 0x10), *make_messages(0x0B, track, 0x10), *make_messages(0x0C, sequencer, 0x10)]).save(source)
+            markdown = inspect.detailed_report(source)
+            html_report = inspect.detailed_report(source, format="html")
+        self.assertIn("Inspection type: **MIXED**", markdown)
+        self.assertIn("Both Sound and Rhythm memory areas are present.", markdown)
+        self.assertIn("## Internal/user Tones (08H): i01 to i32", markdown)
+        self.assertIn("## Timbres A (A-11 to A-88)", markdown)
+        self.assertIn("## Patches 65 to 128", markdown)
+        self.assertIn("| Note | Tone | Tone name | Level | Pan | Reverb |", markdown)
+        self.assertNotIn("Shared name", markdown)
+        self.assertIn('class="paired"', html_report)
+        self.assertIn("MIXED", html_report)
 
     def test_native_validation_and_safe_conversion_failures(self) -> None:
         tones = complete_image(sound.TONE_COUNT * sound.TONE_SYSEX_SIZE)
@@ -431,12 +590,13 @@ class PublicConverterTests(unittest.TestCase):
         with redirect_stdout(version), self.assertRaises(SystemExit) as exited:
             cli.main(["--version"])
         self.assertEqual(exited.exception.code, 0)
-        self.assertIn("d20-tools 0.1.0", version.getvalue())
+        self.assertIn("d20-tools 0.2.0", version.getvalue())
         doctor_output = io.StringIO()
         with redirect_stdout(doctor_output):
             self.assertEqual(cli.main(["doctor"]), 0)
         self.assertIn("D-20 Tools doctor", doctor_output.getvalue())
-        self.assertIn("Version: 0.1.0", doctor_output.getvalue())
+        self.assertIn("Version: 0.2.0", doctor_output.getvalue())
+        self.assertIn("experimental: d110", doctor_output.getvalue())
         self.assertIn("Live MIDI input/output: not included", doctor_output.getvalue())
 
     def test_version_is_sourced_from_package_metadata(self) -> None:

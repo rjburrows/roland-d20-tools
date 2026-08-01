@@ -17,7 +17,7 @@ def report() -> str:
         f"Python: {platform.python_version()} ({platform.system()} {platform.release()})",
         f"Mido: {version('mido')}",
         "Supported input: .mid, .midi, .syx, .333, .444, .111, .222",
-        "Ready commands: inspect, find, report, sound, rhythm",
+        "Ready commands: inspect, find, report, sound, rhythm; experimental: d110",
         "Song and All conversion: work in progress",
         "Live MIDI input/output: not included",
     ))
