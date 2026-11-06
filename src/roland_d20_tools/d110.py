@@ -13,13 +13,37 @@ import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from .core import D20Error, assemble, load_dt1, make_messages, printable_text, require_new_output, roland_checksum, write_syx
+from .core import D20Error, assemble, load_dt1, make_messages, printable_text, require_outputs, roland_checksum, write_syx
 from .reports import PRESET_A, PRESET_B, RHYTHM_TONES
 
 
 TONE_SIZE = 64 * 256
 TIMBRE_SIZE = 128 * 8
 RHYTHM_SIZE = 85 * 4
+# D-110 Owner's Manual p.118, 5-4: six shared fields, Output Assign,
+# then a dummy byte. Never inherit a D-20 reserved byte or receiver state.
+# MIX is the explicit conversion baseline; a factory INIT dump is not yet verified.
+TIMBRE_BASELINE = bytes((0, 0, 24, 50, 2, 0, 0, 0))
+OUTPUT_ASSIGN_BASELINE = TIMBRE_BASELINE[6]
+
+# D-110 Owner's Manual pp.117-118, 5-1-2 (58 bytes per partial).
+PARTIAL_MAXIMA = (
+    96, 100, 16, 1, 3, 127, 100, 14, 10, 100, 4,
+    *([100] * 13), 30, 14, 127, 14, 100, 100, 4, 4,
+    *([100] * 11), 127, 12, 127, 12, 4, 4, *([100] * 9),
+)
+
+
+def _validate_tones(data: bytes) -> None:
+    for index in range(64):
+        tone = data[index * 256:(index + 1) * 256]
+        for offset, maximum in ((10, 12), (11, 12), (12, 15), (13, 1)):
+            _check_range(f"Tone {index + 1} common byte {offset}", tone[offset], 0, maximum)
+        for partial in range(4):
+            for offset, maximum in enumerate(PARTIAL_MAXIMA):
+                _check_range(f"Tone {index + 1} partial {partial + 1} byte {offset}",
+                             tone[14 + partial * 58 + offset], 0, maximum)
+
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,13 +149,15 @@ def _images(source: Path):
 
 
 def _converted_timbres(source) -> tuple[bytearray, int]:
-    result = bytearray(source.data)
+    result = bytearray(TIMBRE_BASELINE * 128)
     replaced = 0
     for offset in range(0, len(result), 8):
-        if result[offset + 6]:
+        result[offset:offset + 6] = source.data[offset:offset + 6]
+        _check_range("source Timbre reverb", source.data[offset + 6], 0, 1)
+        if source.data[offset + 6]:
             replaced += 1
         # D-20: reverb switch. D-110: output assignment. 0 is MIX.
-        result[offset + 6] = 0
+        result[offset + 6] = OUTPUT_ASSIGN_BASELINE
     return result, replaced
 
 
@@ -190,6 +216,7 @@ def validate_messages(messages) -> None:
         raise D20Error("Generated output does not match the supported D-110 Tone, Timbre, and Rhythm Setup address map.")
     if len(tone_data) != TONE_SIZE or any(any(tone_data[index + 246 : index + 256]) for index in range(0, TONE_SIZE, 256)):
         raise D20Error("Generated D-110 Tone memory has invalid reserved bytes or size.")
+    _validate_tones(tone_data)
     _validate_timbres(timbre_data)
     _validate_rhythm(rhythm_data)
 
@@ -201,10 +228,11 @@ def _converted_rhythm(source, user_names: dict[int, str]) -> tuple[bytearray, li
     for index in range(85):
         offset, note = index * 4, index + 24
         tone, level, pan, reverb = source.data[offset : offset + 4]
+        _check_range("source Rhythm reverb", reverb, 0, 1)
         if reverb:
             reverb_enabled += 1
         # D-20: reverb switch. D-110: output assignment. 0 is MIX.
-        result[offset + 3] = 0
+        result[offset + 3] = OUTPUT_ASSIGN_BASELINE
         identifier = _tone_label(tone)
         rows.append(RhythmRow(note, identifier, _tone_name(identifier, user_names), level, pan, "MIX", "D-20 reverb omitted" if reverb else "Direct"))
     return result, rows, reverb_enabled
@@ -228,6 +256,8 @@ def report(source: Path, *, output_name: str, output_messages: int, format: str 
             {"d20_area": "09", "d110_address": "03 01 10", "item": "Rhythm Setup (keys 24-108)", "records": 85},
         ],
         "non_direct": [
+            "Every Timbre writes an explicit output assignment (MIX) and zero dummy byte; factory INIT equivalence is unverified.",
+            "Tone padding is zeroed; all 246 active Tone bytes are copied and range-validated, including muted partials.",
             f"{timbre_replaced} D-20 Timbre reverb-switch values replaced with D-110 MIX output assignment.",
             f"{rhythm_replaced} D-20 Rhythm reverb-switch values omitted; D-110 uses per-key output assignment (MIX).",
             "D-20 Patch memory (07), Rhythm patterns (0A), Rhythm track (0B), and sequencer header (0C) are not converted.",
@@ -331,7 +361,8 @@ def convert(source: Path, destination: Path, *, device_id: int, force: bool, rep
         raise D20Error("Experimental D-110 conversion accepts a complete D-20 .mid/.midi or .syx dump.")
     if destination.suffix.lower() != ".syx":
         raise D20Error("Experimental D-110 conversion writes raw SysEx; the destination must end in .syx.")
-    require_new_output(source, destination, force)
+    report_path = report_path.expanduser() if report_path is not None else None
+    require_outputs(source, [destination] + ([report_path] if report_path is not None else []), force)
     tones, timbres, rhythm = _images(source)
     d110_tones = bytearray(tones.data)
     for offset in range(0, TONE_SIZE, 256):
@@ -362,12 +393,9 @@ def convert(source: Path, destination: Path, *, device_id: int, force: bool, rep
         data = [0x41, device_id, 0x16, 0x12, *address, *payload]
         messages.append(mido.Message("sysex", data=[*data, roland_checksum(data[4:])]))
     validate_messages(messages)
-    write_syx(destination, messages)
     rendered = report(source, output_name=destination.name, output_messages=len(messages), format=report_format)
+    write_syx(destination, messages)
     if report_path is not None:
-        report_path = report_path.expanduser()
-        if report_path.exists() and not force:
-            raise D20Error(f"Report already exists: {report_path}. Use --force to replace it.")
         from .core import atomic_write
 
         atomic_write(report_path, rendered.encode("utf-8"))

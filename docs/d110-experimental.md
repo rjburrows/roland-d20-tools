@@ -64,3 +64,25 @@ row looks like this (the values below are representative):
 Not converted: D-20 Patches, Rhythm patterns, Rhythm track, and sequencer
 header. The D-110's eight-part Patch architecture is not equivalent to D-20
 Patch memory, so no approximation is made.
+
+## Explicit destination initialization
+
+Permanent Timbres are built from a complete eight-byte baseline before the six
+shared D-20 fields are copied. Output assignment is explicitly written as MIX
+(0); the dummy byte is explicitly zero. The converter does not inherit either
+byte from the source's reserved data or the destination's current memory.
+Rhythm output assignment is also explicitly MIX. All 246 active Tone bytes
+are transferred, including muted partials; the ten padding bytes are zeroed.
+Common and partial parameters are range-validated before output is written.
+Source reverb switches must be 0 or 1 before substitution.
+
+Reference: [Roland D-110 Owner's Manual](https://cdn.roland.com/assets/media/pdf/D-110_OM.pdf),
+printed pp.117–118, tables 5-1, 5-3 and 5-4. These tables establish parameter
+ranges and MIX encoding, **not a verified factory INIT snapshot**. MIX is the
+current explicit conversion baseline, not a claim of verified INIT equivalence.
+A hardware INIT dump is still needed to verify that equivalence. When Patch
+conversion is implemented, it must start from a verified complete D-110 INIT
+Patch and overlay mapped fields; unverified defaults must block that conversion.
+Patch conversion remains unsupported and does not write Patch or System memory.
+
+Hardware read-back and listening validation remain outstanding.
