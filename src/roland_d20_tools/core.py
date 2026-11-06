@@ -41,6 +41,9 @@ class MemoryImage:
         end = offset + len(payload)
         if offset < 0 or end > len(self.data):
             raise D20Error(f"{label} exceeds its {len(self.data)}-byte D-20 memory area.")
+        for index, value in enumerate(payload, offset):
+            if self.present[index] and self.data[index] != value:
+                raise D20Error(f"{label} has conflicting writes at byte {index}.")
         self.data[offset:end] = bytes(payload)
         self.present[offset:end] = b"\x01" * len(payload)
 
@@ -68,10 +71,30 @@ def atomic_write(path: Path, data: bytes) -> None:
 
 
 def require_new_output(source: Path, destination: Path, force: bool) -> None:
-    if source.resolve() == destination.resolve():
+    if source.resolve() == destination.resolve() or (source.exists() and destination.exists() and source.samefile(destination)):
         raise D20Error("Input and output must be different files.")
     if destination.exists() and not force:
         raise D20Error(f"Output already exists: {destination}. Use --force to replace it.")
+
+
+def require_outputs(source: Path, outputs: Sequence[Path], force: bool) -> None:
+    """Preflight every output, including aliases, before writing any file."""
+    for index, destination in enumerate(outputs):
+        require_new_output(source, destination, force)
+        for other in outputs[:index]:
+            require_new_output(other, destination, True)
+
+
+def validate_dump(messages: Sequence[D20Message]) -> None:
+    """A backup must describe one unambiguous device snapshot."""
+    if len({message.device_id for message in messages}) > 1:
+        raise D20Error("Mixed device IDs: supply a dump from one device only.")
+    areas = {}
+    for message in messages:
+        if message.address[0] not in areas:
+            areas[message.address[0]] = MemoryImage.create(16384)
+        image = areas[message.address[0]]
+        image.write(message.offset, message.payload, f"Area {message.address[0]:02X}")
 
 
 def read_file(path: Path) -> bytes:
@@ -98,7 +121,10 @@ def scan_messages(messages: Iterable[mido.Message]) -> list[D20Message]:
         raw = tuple(message.data)
         if not raw or raw[0] != 0x41:
             continue
-        if len(raw) < 8 or raw[2:4] != (0x16, 0x12):
+        if raw[2:4] != (0x16, 0x12):
+            continue
+        if len(raw) < 9:
+            invalid += 1
             continue
         if any(value > 0x7F for value in raw):
             invalid += 1
@@ -110,6 +136,7 @@ def scan_messages(messages: Iterable[mido.Message]) -> list[D20Message]:
         result.append(D20Message(raw[1], address, payload))
     if invalid:
         raise D20Error(f"Input contains {invalid} malformed D-20 DT1 message(s).")
+    validate_dump(result)
     return result
 
 
@@ -155,6 +182,8 @@ def assemble_partial(messages: Iterable[D20Message], area: int, size: int, label
     partial transfer. Converters continue to use :func:`assemble`, which
     requires complete coverage before it writes a native file.
     """
+    messages = list(messages)
+    validate_dump(messages)
     image = MemoryImage.create(size, fill)
     for message in messages:
         if message.address[0] == area:

@@ -9,7 +9,7 @@ import io
 import json
 from pathlib import Path
 
-from .core import D20Error, MemoryImage, assemble_partial, atomic_write, make_messages, note_name, printable_text, read_file, scan_messages, scan_midi, scan_syx, user_tone_names
+from .core import D20Error, MemoryImage, assemble_partial, atomic_write, make_messages, note_name, printable_text, read_file, require_new_output, scan_messages, scan_midi, scan_syx, user_tone_names
 from . import reports
 
 
@@ -128,8 +128,11 @@ def _native_detail(kind: str) -> str:
     return f"Native {kind.title()} data was expanded to DT1-equivalent messages."
 
 
-def _classify_blocks(blocks: Counter[int]) -> tuple[str, str]:
-    if COMPLETE_ALL_AREAS <= blocks.keys():
+def _classify_blocks(blocks: Counter[int], messages=None) -> tuple[str, str]:
+    if COMPLETE_ALL_AREAS <= blocks.keys() and messages is not None and all(
+        assemble_partial(messages, area, AREA_SIZES[area], LABELS[area]).complete()
+        for area in COMPLETE_ALL_AREAS
+    ):
         return "ALL_DUMP", "Every complete-backup memory area, including System, is present."
     if 0x10 in blocks:
         return "SYSTEM_DUMP", "The System area is present, but this is not a complete All MIDI/SysEx dump."
@@ -183,7 +186,7 @@ def report(path: Path) -> str:
         else:
             detail = _native_detail(kind)
     else:
-        kind, detail = _classify_blocks(blocks)
+        kind, detail = _classify_blocks(blocks, messages)
     lines.extend(("", detail, _declaration(kind)))
     return "\n".join(lines)
 
@@ -320,9 +323,9 @@ def detailed_report(path: Path, *, format: str = "markdown") -> str:
     source, native, messages = _inspection_data(path)
     names = user_tone_names(messages)
     blocks = Counter(message.address[0] for message in messages)
-    inspection_kind, inspection_detail = (native[0], _native_detail(native[0])) if native else _classify_blocks(blocks)
+    inspection_kind, inspection_detail = (native[0], _native_detail(native[0])) if native else _classify_blocks(blocks, messages)
     partial_rows = _partial_area_rows(messages, blocks)
-    area_rows = [(f"{area:02X}H", LABELS.get(area, "Unknown"), str(count), f"{sum(len(message.payload) for message in messages if message.address[0] == area):,}", f"{AREA_SIZES[area]:,}" if area in AREA_SIZES else "Unknown", "PARTIAL" if any(row[0].startswith(f"{area:02X}H ") for row in partial_rows) else "Complete") for area, count in sorted(blocks.items())]
+    area_rows = [(f"{area:02X}H", LABELS.get(area, "Unknown"), str(count), f"{len({message.offset + index for message in messages if message.address[0] == area for index in range(len(message.payload))}):,}", f"{AREA_SIZES[area]:,}" if area in AREA_SIZES else "Unknown", "Unknown" if area not in AREA_SIZES else "PARTIAL" if any(row[0].startswith(f"{area:02X}H ") for row in partial_rows) else "Complete") for area, count in sorted(blocks.items())]
     tone_area, tones = _tone_rows(messages) if any(area in blocks for area in (0x04, 0x08)) else (None, [])
     timbres = _timbre_rows(messages, names) if 0x05 in blocks else []
     patches = _patch_rows(messages, names) if 0x07 in blocks else []
@@ -385,6 +388,5 @@ def detailed_report(path: Path, *, format: str = "markdown") -> str:
 
 def write_detailed_report(path: Path, destination: Path, *, format: str, force: bool) -> None:
     destination = destination.expanduser()
-    if destination.exists() and not force:
-        raise D20Error(f"Inspection report already exists: {destination}. Use --force to replace it.")
+    require_new_output(path.expanduser(), destination, force)
     atomic_write(destination, detailed_report(path, format=format).encode("utf-8"))

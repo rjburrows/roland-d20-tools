@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .core import D20Error, D20Message, MemoryImage, assemble, atomic_write, make_messages, read_file, require_new_output, scan_midi, scan_syx, write_midi, write_syx
+from . import preservation
+
+from .core import D20Error, D20Message, MemoryImage, assemble, atomic_write, make_messages, read_file, require_new_output, require_outputs, scan_midi, scan_syx, write_midi, write_syx
 
 
 FILE_SIZE, HEADER_SIZE = 12_288, 0x100
@@ -86,16 +88,21 @@ def convert(source: Path, destination: Path, *, device_id: int, force: bool) -> 
     if input_type == ".444":
         if output_type == ".444":
             raise D20Error("A .444 input must produce .mid, .midi, or .syx.")
+        require_outputs(source, [destination, preservation.sidecar(destination)], force)
         disk_name, setup, pattern, track, sequencer = decode(source)
         messages = [*make_messages(0x09, setup, device_id), *make_messages(0x0A, pattern, device_id), *make_messages(0x0B, track, device_id), *make_messages(0x0C, sequencer, device_id)]
         if output_type in {".mid", ".midi"}:
             write_midi(destination, "Roland D-20 Rhythm conversion", messages)
         else:
             write_syx(destination, messages)
-        return f"Converted {source.name} ({disk_name}) to {destination.name}: {len(messages)} DT1 messages."
+        preservation.save(source, destination)
+        return f"Preserved original native bytes in {preservation.sidecar(destination).name}. Converted {source.name} ({disk_name}) to {destination.name}: {len(messages)} DT1 messages."
     if output_type != ".444":
         raise D20Error("MIDI/SysEx Rhythm input can only produce a .444 file.")
     messages = scan_syx(source) if input_type == ".syx" else scan_midi(source)
     disk_name = destination.stem.upper()[:10]
-    atomic_write(destination, encode(disk_name, messages))
-    return f"Converted {source.name} to {destination.name} ({disk_name.upper()}), {FILE_SIZE} bytes."
+    normalized = encode(disk_name, messages)
+    preserved = preservation.restore(source, ".444")
+    atomic_write(destination, preserved if preserved is not None else normalized)
+    detail = "Original native bytes and stored name restored." if preserved is not None else "Normalized container: header/reserved bytes regenerated; unrelated SysEx areas are omitted."
+    return detail + " " + f"Converted {source.name} to {destination.name} ({disk_name.upper()}), {FILE_SIZE} bytes."

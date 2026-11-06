@@ -216,3 +216,25 @@ MIT. See [LICENSE](LICENSE).
 See [the changelog](CHANGELOG.md) for version history, [the contribution and
 release guide](docs/contributing.md) for local and CI checks, and
 [SECURITY.md](SECURITY.md) for responsible vulnerability reporting.
+
+### Backup safety and native-byte preservation
+
+Conflicting DT1 writes and mixed device IDs are rejected; identical repeated
+blocks are accepted and count only once toward memory coverage. Reports cannot
+overwrite inputs or another output, even with `--force` or filesystem aliases.
+An ALL dump classification requires full coverage of every expected area.
+Unknown areas are not reported as complete.
+
+Exporting a native Sound/Rhythm file now also writes `<output>.native.json`.
+Keep this preservation sidecar with the MIDI/SysEx export: it stores the original
+native bytes, including opaque header/reserved regions, and the export's SHA-256.
+Converting that unchanged export back restores the original file byte for byte,
+including its stored name, even if the destination filename differs. The sidecar
+is never sent to hardware. Both output paths are checked before writing.
+
+If the export changes, restoration fails explicitly rather than applying stale
+native data. Keep the original pair; move the sidecar aside to request a normalized
+conversion of an edited export. Without a sidecar, the tool reports that native
+headers/reserved bytes are regenerated and unrelated SysEx areas are omitted.
+Individual files are written atomically; a multi-file export is not a filesystem
+transaction, so retain the original backup if an I/O error interrupts it.

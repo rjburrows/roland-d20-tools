@@ -50,13 +50,13 @@ class CoreTests(unittest.TestCase):
 
     def test_midi_and_syx_parsers_handle_multiple_valid_frames(self) -> None:
         image = complete_image(1)
-        first, second = make_messages(0x08, image, 0x10)[0], make_messages(0x07, image, 0x7F)[0]
+        first, second = make_messages(0x08, image, 0x10)[0], make_messages(0x07, image, 0x10)[0]
         raw = b"\x00\n" + bytes((0xF0, *first.data, 0xF7)) + b" \t" + bytes((0xF0, 0x7D, 1, 2, 0xF7)) + bytes((0xF0, *second.data, 0xF7))
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             syx = root / "mixed.syx"
             syx.write_bytes(raw)
-            self.assertEqual([(item.device_id, item.address[0]) for item in scan_syx(syx)], [(0x10, 0x08), (0x7F, 0x07)])
+            self.assertEqual([(item.device_id, item.address[0]) for item in scan_syx(syx)], [(0x10, 0x08), (0x10, 0x07)])
             midi = mido.MidiFile(type=1)
             midi.tracks.append(mido.MidiTrack([first]))
             midi.tracks.append(mido.MidiTrack([second]))

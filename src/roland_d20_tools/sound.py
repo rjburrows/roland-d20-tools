@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .core import D20Error, D20Message, MemoryImage, assemble, atomic_write, make_messages, read_file, require_new_output, scan_midi, scan_syx, write_midi, write_syx
+from . import preservation
+
+from .core import D20Error, D20Message, MemoryImage, assemble, atomic_write, make_messages, read_file, require_new_output, require_outputs, scan_midi, scan_syx, write_midi, write_syx
 
 
 FILE_SIZE, HEADER_SIZE = 24_576, 0x100
@@ -82,16 +84,21 @@ def convert(source: Path, destination: Path, *, device_id: int, force: bool) -> 
     if input_type == ".333":
         if output_type == ".333":
             raise D20Error("A .333 input must produce .mid, .midi, or .syx.")
+        require_outputs(source, [destination, preservation.sidecar(destination)], force)
         disk_name, tones, timbres, patches = decode(source)
         messages = [*make_messages(0x05, timbres, device_id), *make_messages(0x07, patches, device_id), *make_messages(0x08, tones, device_id)]
         if output_type in {".mid", ".midi"}:
             write_midi(destination, "Roland D-20 Sound conversion", messages)
         else:
             write_syx(destination, messages)
-        return f"Converted {source.name} ({disk_name}) to {destination.name}: {len(messages)} DT1 messages."
+        preservation.save(source, destination)
+        return f"Preserved original native bytes in {preservation.sidecar(destination).name}. Converted {source.name} ({disk_name}) to {destination.name}: {len(messages)} DT1 messages."
     if output_type != ".333":
         raise D20Error("MIDI/SysEx Sound input can only produce a .333 file.")
     messages = scan_syx(source) if input_type == ".syx" else scan_midi(source)
     disk_name = destination.stem.upper()[:10]
-    atomic_write(destination, encode(disk_name, messages))
-    return f"Converted {source.name} to {destination.name} ({disk_name.upper()}), {FILE_SIZE} bytes."
+    normalized = encode(disk_name, messages)
+    preserved = preservation.restore(source, ".333")
+    atomic_write(destination, preserved if preserved is not None else normalized)
+    detail = "Original native bytes and stored name restored." if preserved is not None else "Normalized container: header/reserved bytes regenerated; unrelated SysEx areas are omitted."
+    return detail + " " + f"Converted {source.name} to {destination.name} ({disk_name.upper()}), {FILE_SIZE} bytes."
