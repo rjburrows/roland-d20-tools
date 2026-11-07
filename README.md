@@ -55,8 +55,8 @@ d20-tools report patch D20BACKUP.mid --patch 1 --showtones
 d20-tools find ~/D20-library "Star Synth"
 d20-tools sound TESTSND.333 TESTSND.mid
 d20-tools rhythm TESTRHY.444 TESTRHY.syx
-d20-tools song TESTSONG.222 TESTSONG-notes.mid --tempo-bpm 120
-d20-tools all TESTALL.111 TESTALL-notes.mid --tempo-bpm 120
+d20-tools song MYSONG.222 MYSONG-notes.mid --tempo-bpm 120
+d20-tools all MYBACKUP.111 MYBACKUP-notes.mid --tempo-bpm 120
 d20-tools d110 D20BACKUP.mid D110-SNDRHY.syx --report D110-SNDRHY.md
 ```
 
@@ -203,8 +203,8 @@ D20_DEMO_DUMP_MID=/path/to/DemoDump.mid \
 D20_TESTSND_333=/path/to/TESTSND.333 \
 D20_TESTRHY_444=/path/to/TESTRHY.444 \
 D20_FACTORY_MID=/path/to/D1020ORIG.MID \
-D20_TESTSONG_222=/path/to/TESTSONG.222 \
-D20_TESTALL_111=/path/to/TESTALL.111 \
+D20_TESTSONG_222=/path/to/song.222 \
+D20_TESTALL_111=/path/to/backup.111 \
 python -m unittest discover -s tests -v
 ```
 

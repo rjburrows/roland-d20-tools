@@ -1,7 +1,7 @@
 # Song note export (BETA)
 
 ```sh
-d20-tools song TESTSONG.222 TESTSONG-notes.mid --tempo-bpm 120
+d20-tools song MYSONG.222 MYSONG-notes.mid --tempo-bpm 120
 ```
 
 This one-way export reads the native Song container and writes a Type-1 Standard
@@ -22,7 +22,7 @@ convert back to a native `.222` file. Keep the original disk file.
 
 The event index must point to separate `FF` boundary bytes and each parsed
 record must have a supported `8x` or `9x` note status. Unsupported or malformed
-records cause a clear error before any output is written. This BETA grammar
-has been checked against the local `TESTSONG.222` sample and its matching
-`TESTALL.111` Song region; other firmware versions and compositions need
-additional validation. Run `d20-tools inspect TESTSONG.222` for an inventory.
+records cause a clear error before any output is written. The BETA grammar was
+validated against a paired Song/All disk capture and the C 1.11 ROM, but other
+firmware versions and compositions may contain event types this exporter does
+not yet support. Run `d20-tools inspect MYSONG.222` for an inventory.
