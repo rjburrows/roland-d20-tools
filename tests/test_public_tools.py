@@ -413,7 +413,7 @@ class PublicConverterTests(unittest.TestCase):
             self.assertIn("Valid messages: 78", song_output)
             self.assertIn("0AH  Rhythm Pattern: 64 message(s)", song_output)
             self.assertIn("Song event stream: 14,848 bytes", song_output)
-            self.assertIn("tempo and track count not decoded", song_output)
+            self.assertIn("saved tempo not decoded", song_output)
             self.assertTrue(song_output.endswith("This is a SONG file."))
             song_report = root / "song-report.html"
             output = io.StringIO()
@@ -563,11 +563,13 @@ class PublicConverterTests(unittest.TestCase):
             self.assertEqual(rhythm.decode(rebuilt)[0], "RHYTEST")
             self.assertEqual(rebuilt.read_bytes(), raw)
 
-    def test_invalid_and_wip_commands_fail_safely(self) -> None:
+    def test_invalid_and_incomplete_beta_commands_fail_safely(self) -> None:
         errors = io.StringIO()
         with redirect_stderr(errors):
-            self.assertEqual(cli.main(["song"]), 2)
-            self.assertEqual(cli.main(["all"]), 2)
+            for command in ("song", "all"):
+                with self.assertRaises(SystemExit) as exited:
+                    cli.main([command])
+                self.assertEqual(exited.exception.code, 2)
         self.assertTrue(errors.getvalue().startswith("\n"))
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "not-a-midi.mid"
@@ -597,6 +599,7 @@ class PublicConverterTests(unittest.TestCase):
         self.assertIn("D-20 Tools doctor", doctor_output.getvalue())
         self.assertIn("Version: 0.2.0", doctor_output.getvalue())
         self.assertIn("experimental: d110", doctor_output.getvalue())
+        self.assertIn("BETA note export: song, all", doctor_output.getvalue())
         self.assertIn("Live MIDI input/output: not included", doctor_output.getvalue())
 
     def test_version_is_sourced_from_package_metadata(self) -> None:

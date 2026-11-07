@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **BETA** one-way note-event MIDI export for native Song (`.222`) and All
+  (`.111`) files, using their shared Song region. Exports Type-1 MIDI with
+  96 positions per quarter, stored-status lanes, and validated pattern meter.
+- Generated cross-format timing, running-status, error, and output-safety tests.
+
+### Limitations
+
+- Saved tempo, original routing/patches and rhythm-pattern notes are not yet
+  decoded. An explicit audition tempo is required; no native round trip.
+
 ## [0.2.0] - 2026-07-31
 
 ### Added

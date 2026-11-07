@@ -1,15 +1,28 @@
-# Song converter (`d20-tools song`) — work in progress
+# Song note export (BETA)
 
-Song files use the `.222` extension. The command reserves a stable public
-interface for future support, but deliberately performs no conversion in
-version 0.2 and exits with a clear WIP message.
+```sh
+d20-tools song TESTSONG.222 TESTSONG-notes.mid --tempo-bpm 120
+```
 
-`d20-tools inspect INPUT` already identifies a native Song container from its
-validated structure, including its embedded Rhythm section, rather than from
-its filename extension. It lists the embedded Rhythm Setup, Pattern, Track,
-and Sequencer Header as 78 DT1-equivalent messages. The Song's real-time event
-stream has no DT1-memory equivalent and is not converted yet.
+This one-way export reads the native Song container and writes a Type-1 Standard
+MIDI file with a conductor track and one track per observed stored-status lane.
+The note events and relative timing follow the C 1.11 control ROM reader at
+`0x6F6A–0x6FDB`, the 192-position storage interval at `0x6ED1`, and the
+96-position-per-quarter duration table at `0x5EAA`. Stored one-data-byte `8x`
+note-offs become MIDI `9x` messages with zero velocity, matching the ROM's
+playback transformation at `0x6FCF`.
 
-Song conversion needs separate treatment for the real-time note tracks and the
-rhythm-pattern chain. It will not be released until both can be validated
-without altering the source file.
+The selected audition tempo is **not read from the Song file**. `--tempo-bpm`
+is required to prevent accidental claims about the saved tempo. Validated
+pattern IDs and 1–8 beat lengths in the header produce time-signature changes;
+unverified chain data produces no time-signature events. Channels retain the
+stored status low nibble provisionally. The converter does not expand rhythm
+patterns, assign original track routing or patches, decode saved tempo, or
+convert back to a native `.222` file. Keep the original disk file.
+
+The event index must point to separate `FF` boundary bytes and each parsed
+record must have a supported `8x` or `9x` note status. Unsupported or malformed
+records cause a clear error before any output is written. This BETA grammar
+has been checked against the local `TESTSONG.222` sample and its matching
+`TESTALL.111` Song region; other firmware versions and compositions need
+additional validation. Run `d20-tools inspect TESTSONG.222` for an inventory.

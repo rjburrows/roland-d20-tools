@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 import sys
 
-from . import __version__, d110, doctor, finder, inspect, reports, rhythm, sound
+from . import __version__, d110, doctor, finder, inspect, reports, rhythm, song, sound
 from .core import D20Error, parse_device_id
 
 
@@ -148,18 +148,17 @@ def parser() -> argparse.ArgumentParser:
             report.add_argument("--showtones", action="store_true", help="append assigned editable Tone configuration (requires --timbre)")
         elif name == "tone":
             report.add_argument("--tone", type=parse_internal_tone, metavar="i01..i64", help="show one complete internal/user Tone record (omit to list populated Tones)")
-    commands.add_parser(
-        "song",
-        help="Song .222 conversion (work in progress)",
-        description="Reserved for D-20 Song (.222) conversion. This command is not available in v0.1.",
-        epilog=examples("d20-tools song"),
-    )
-    commands.add_parser(
-        "all",
-        help="All .111 conversion (work in progress)",
-        description="Reserved for D-20 All (.111) conversion. This command is not available in v0.1.",
-        epilog=examples("d20-tools all"),
-    )
+    for name, extension in (("song", ".222"), ("all", ".111")):
+        native = commands.add_parser(
+            name,
+            help=f"BETA: export note events from a native {extension} file",
+            description=f"BETA one-way note-only MIDI export from D-20 {extension}. Rhythm-pattern notes, saved tempo and track routing are not yet decoded.",
+            epilog=examples(f"d20-tools {name} TEST{name.upper()}{extension} notes.mid --tempo-bpm 120"),
+        )
+        native.add_argument("input", type=Path, help=f"source native {extension} file")
+        native.add_argument("output", type=Path, help="destination Standard MIDI .mid/.midi file")
+        native.add_argument("--tempo-bpm", type=int, required=True, help="explicit audition tempo (4..300); not read from the file")
+        native.add_argument("--force", action="store_true", help="replace an existing output")
     return result
 
 
@@ -167,8 +166,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     try:
         if args.command in {"song", "all"}:
-            emit(f"The D-20 {args.command.title()} converter is a work in progress and is not available in v0.2.", file=sys.stderr)
-            return 2
+            emit(song.convert(args.input, args.output, tempo_bpm=args.tempo_bpm,
+                              force=args.force, expected_kind=args.command.upper()))
+            return 0
         if args.command == "inspect":
             if args.report:
                 inspect.write_detailed_report(args.input, args.report, format=args.report_format, force=args.force)

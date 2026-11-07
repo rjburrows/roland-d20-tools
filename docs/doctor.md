@@ -17,7 +17,7 @@ Python: 3.10.0 (Darwin 24.0.0)
 Mido: 1.3.3
 Supported input: .mid, .midi, .syx, .333, .444, .111, .222
 Ready commands: inspect, find, report, sound, rhythm; experimental: d110
-Song and All conversion: work in progress
+BETA note export: song, all (rhythm-pattern notes and saved tempo not decoded)
 Live MIDI input/output: not included
 ```
 

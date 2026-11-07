@@ -23,8 +23,8 @@ Version 0.2 provides detailed, read-only reports for D-20 System, Patch,
 Timbre, Tone, and Rhythm data; file identification; named-sound search; and
 Sound/Rhythm conversion. It accepts standard MIDI, raw SysEx, and the native
 D-20 file types described below. `inspect` also identifies native Song (`.222`)
-and All (`.111`) containers by their contents. Song and All conversion remain
-work-in-progress placeholders and do not modify files.
+and All (`.111`) containers by their contents. BETA Song/All note export is
+available; saved tempo and rhythm-pattern expansion are still under research.
 
 ## Install
 
@@ -55,6 +55,8 @@ d20-tools report patch D20BACKUP.mid --patch 1 --showtones
 d20-tools find ~/D20-library "Star Synth"
 d20-tools sound TESTSND.333 TESTSND.mid
 d20-tools rhythm TESTRHY.444 TESTRHY.syx
+d20-tools song TESTSONG.222 TESTSONG-notes.mid --tempo-bpm 120
+d20-tools all TESTALL.111 TESTALL-notes.mid --tempo-bpm 120
 d20-tools d110 D20BACKUP.mid D110-SNDRHY.syx --report D110-SNDRHY.md
 ```
 
@@ -75,8 +77,8 @@ replace the destination.
 | `d20-tools sound` | Ready | [Sound converter](docs/sound-converter.md) |
 | `d20-tools rhythm` | Ready | [Rhythm converter](docs/rhythm-converter.md) |
 | `d20-tools d110` | **Experimental** — one-way D-20 to D-110 conversion; verify the report before use | [D-110 experimental converter](docs/d110-experimental.md) |
-| `d20-tools song` | WIP placeholder | [Song WIP](docs/song-wip.md) |
-| `d20-tools all` | WIP placeholder | [All-file WIP](docs/all-wip.md) |
+| `d20-tools song` | **BETA** — one-way native Song note export | [Song note export](docs/song-wip.md) |
+| `d20-tools all` | **BETA** — one-way native All note export | [All-file note export](docs/all-wip.md) |
 
 ## Design
 
@@ -94,8 +96,8 @@ flowchart LR
     D <--> E
     D <--> F
     K --> N[d20-tools d110\nExperimental D-110 SysEx]
-    G[.222 Song file] --> H[d20-tools song\nWIP]
-    I[.111 All file] --> J[d20-tools all\nWIP]
+    G[.222 Song file] --> H[d20-tools song\nBETA note MIDI]
+    I[.111 All file] --> J[d20-tools all\nBETA note MIDI]
     I --> M
 ```
 
@@ -180,9 +182,12 @@ d20-tools doctor
 d20-tools --version
 ```
 
-`song` and `all` are visible placeholders for future file conversion work.
-They are clearly marked WIP and do not modify files. You can already inspect
-native `.222` Song and `.111` All files, and search an All file with `find`.
+`song` and `all` export the ROM-validated discrete note events to separate
+Type-1 MIDI tracks. They require an explicit `--tempo-bpm` audition value;
+the file's saved tempo is not decoded yet. The BETA output includes candidate
+meter changes from validated pattern lengths, but not rhythm-pattern notes,
+patches, or proven original channel routing. Source files are never modified.
+See the [Song](docs/song-wip.md) and [All](docs/all-wip.md) guides.
 
 ## Testing
 
@@ -198,6 +203,8 @@ D20_DEMO_DUMP_MID=/path/to/DemoDump.mid \
 D20_TESTSND_333=/path/to/TESTSND.333 \
 D20_TESTRHY_444=/path/to/TESTRHY.444 \
 D20_FACTORY_MID=/path/to/D1020ORIG.MID \
+D20_TESTSONG_222=/path/to/TESTSONG.222 \
+D20_TESTALL_111=/path/to/TESTALL.111 \
 python -m unittest discover -s tests -v
 ```
 
