@@ -60,8 +60,9 @@ following is the shape of an inspected D-20 Timbre row:
 
 For a native Song (`.222`) or an All (`.111`) file, both the compact summary
 and structured report include the native Song event-stream region's size and
-non-zero-byte count. Tempo and track count are deliberately shown as an
-undecoded placeholder; the tool does not interpret event bytes as music yet.
+non-zero-byte count. If the BETA event grammar validates, they also report
+note count, stored-status lanes and candidate rhythm-chain meter. Saved tempo
+and original track routing remain undecoded.
 The structured report also records whether the Song's embedded Rhythm data was
 expanded to DT1-equivalent areas.
 

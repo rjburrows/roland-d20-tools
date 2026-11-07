@@ -180,7 +180,13 @@ def report(path: Path) -> str:
         if kind in {"SONG", "ALL"}:
             raw = read_file(source)
             event_data = raw[0x100:SONG_EMBEDDED_RHYTHM_OFFSET]
-            lines.append(f"  Song event stream: {len(event_data):,} bytes; {sum(bool(value) for value in event_data):,} non-zero bytes (tempo and track count not decoded)")
+            from . import song
+            try:
+                notes = song.decode(raw)
+                detail = f"BETA {len(notes.events)} note events, stored lanes {notes.lanes}; saved tempo not decoded"
+            except D20Error:
+                detail = "BETA note decode unavailable; saved tempo not decoded"
+            lines.append(f"  Song event stream: {len(event_data):,} bytes; {sum(bool(value) for value in event_data):,} non-zero bytes ({detail})")
         if kind == "ALL":
             kind, detail = "ALL_DISK", _native_detail("ALL")
         else:
@@ -280,6 +286,14 @@ def _song_metadata(source: Path, native) -> list[tuple[str, str]]:
         return []
     raw = read_file(source)
     event_data = raw[0x100:SONG_EMBEDDED_RHYTHM_OFFSET]
+    from . import song
+    try:
+        notes = song.decode(raw)
+        note_details = f"BETA: {len(notes.events)} note events on stored lanes {notes.lanes}; 96 positions per quarter"
+        meter_details = f"{notes.pattern_count} pattern selections; changes {notes.meter_changes}" if notes.pattern_count else "Pattern meter unverified"
+    except D20Error:
+        note_details = "BETA note decode unavailable for this container"
+        meter_details = "Pattern meter unverified"
     rhythm_description = (
         f"{len(raw) - SONG_EMBEDDED_RHYTHM_OFFSET:,} bytes including the 256-byte Rhythm header; expanded to areas 09H, 0AH, 0BH, and 0CH"
         if native[0] == "SONG"
@@ -289,7 +303,9 @@ def _song_metadata(source: Path, native) -> list[tuple[str, str]]:
         ("Container name", native[1] + (" (embedded Song region)" if native[0] == "ALL" else "")),
         ("Native event-stream region", f"{len(event_data):,} bytes; {sum(bool(value) for value in event_data):,} non-zero bytes"),
         ("Rhythm data", rhythm_description),
-        ("Tempo / track count", "Placeholder: native Song event data is preserved but not decoded yet."),
+        ("BETA note events", note_details),
+        ("BETA rhythm-chain meter", meter_details),
+        ("Tempo / track count", "Saved tempo and original track routing remain undecoded."),
     ]
 
 

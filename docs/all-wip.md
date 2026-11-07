@@ -1,14 +1,17 @@
-# All-file converter (`d20-tools all`) — work in progress
+# All-file note export (BETA)
 
-All files use the `.111` extension. This documented placeholder deliberately
-performs no conversion in version 0.2.
+```sh
+d20-tools all TESTALL.111 TESTALL-notes.mid --tempo-bpm 120
+```
 
-`d20-tools inspect INPUT` already identifies a native All container from its
-validated header and lists its embedded Sound and Rhythm areas as 165
-DT1-equivalent messages. Its output label is `ALL (DISK)`, distinct from a
-complete System-inclusive MIDI/SysEx backup labelled `ALL (MIDI DUMP)`. It does
-not yet decode or convert the contents.
+Native `.111` All files contain the same Song header, event index and event
+region as a `.222` Song file. This BETA command uses the shared Song decoder
+to export note events to a Type-1 Standard MIDI file. The `TESTALL.111` and
+`TESTSONG.222` validation pair yield identical notes and time signatures.
 
-An All file combines several D-20 memory domains. Support will be added only
-after its container layout and every embedded native mirror/consistency rule
-are independently validated.
+`--tempo-bpm` is an explicit audition value; the saved tempo has not been
+decoded. The output omits expanded rhythm-pattern notes, original channel and
+patch routing, and the embedded Sound/Rhythm SysEx domains. `d20-tools inspect`
+can inventory those embedded domains. This command is one-way; retain the
+original `.111` file. See [Song note export](song-wip.md) for the ROM-backed
+record grammar, timing, and BETA validation limits.

@@ -9,9 +9,10 @@ flowchart TD
     CLI --> S[Sound converter]
     CLI --> R[Rhythm converter]
     CLI --> X[Experimental D-20 to D-110 converter]
-    CLI --> W[Song / All placeholders]
+    CLI --> W[BETA Song / All note export]
     S --> Core[Shared D-20 validation core]
     R --> Core
+    W --> Core
     X --> Core
     D --> Core
     F --> Core
@@ -30,6 +31,9 @@ the rules for their respective native containers.
 `reports.py` decodes complete records only; it never substitutes missing bytes.
 `d110.py` produces only validated D-110 SysEx and comparison reports; it is
 kept separate because D-110 hardware round-trip validation is still pending.
+`song.py` decodes the shared Song region in native `.222` and `.111` files to
+provisional note lanes, then exports Type-1 MIDI. The saved tempo and rhythm
+pattern playback remain outside this BETA decoder.
 The CLI dispatches one explicit subcommand and never guesses a file type. See
 the [memory-address reference](memory-map.md) for the layouts used by each
 module.
