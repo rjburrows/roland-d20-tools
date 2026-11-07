@@ -10,9 +10,9 @@ d20-tools inspect D20BACKUP.mid
 d20-tools inspect D20BACKUP.syx
 d20-tools inspect MY_SOUNDS.333
 d20-tools inspect MY_RHYTHMS.444
-d20-tools inspect TESTSONG.222
-d20-tools inspect TESTALL.111
-d20-tools inspect TESTALL.111 --report TESTALL-inspection.html --report-format html
+d20-tools inspect MYSONG.222
+d20-tools inspect MYBACKUP.111
+d20-tools inspect MYBACKUP.111 --report backup-inspection.html --report-format html
 d20-tools inspect D20BACKUP.mid --report inspection.json --report-format json
 d20-tools inspect D20BACKUP.mid --report inspection.csv --report-format csv
 ```
