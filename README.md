@@ -214,9 +214,17 @@ This is an independent utility for archival and conversion. Always keep an
 untouched copy of an original disk file. The `.333` and `.444` converters
 validate their D-20 container layouts and Roland DT1 checksums before writing.
 
+## Bonus: Roland D-20 PCM samples
+
+[Download the PCM sample ZIP](https://github.com/rjburrows/roland-d20-tools/raw/refs/heads/main/bonus/D20_PCM_Samples.zip) — 256 named WAV selections in two banks, extracted from the supplied D-20 PCM ROM images using the tone ROM's selection metadata. These are raw factory waveform regions, not complete synthesizer patches. Names follow the D-20 Owner's Manual PCM tables.
+
+**Original PCM waveform content copyright Roland Corporation. Shared for experimentation and non-commercial use only.** The samples are excluded from this project's MIT licence; no licence or endorsement from Roland is claimed.
+
+See the [Bonus sample guide](bonus/README.md) for the source ROM filenames, extraction details, playback limitations and copyright notice.
+
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Project software is MIT licensed. See [LICENSE](LICENSE). The Roland PCM sample content is excluded; see its separate [copyright and usage notice](bonus/NOTICE.txt).
 
 ## Releases and security
 

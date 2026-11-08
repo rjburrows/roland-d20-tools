@@ -1,0 +1,8 @@
+Roland D-20 PCM samples — copyright and usage notice
+===================================================
+The original PCM waveform content is copyright Roland Corporation.
+These extracted samples are shared for experimentation and non-commercial use only.
+They are excluded from this project's MIT licence. All rights in the original
+waveform content remain with Roland Corporation. This notice does not claim
+that Roland Corporation has granted a redistribution or other licence.
+This is an independent project, not affiliated with or endorsed by Roland Corporation.
