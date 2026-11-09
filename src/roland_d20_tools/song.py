@@ -2,8 +2,8 @@
 
 The event grammar follows C 1.11 ROM 6F6A-6FDB and 6FDC-70B0. The 192-position
 storage interval follows 6ED1; 5E06/5EAA support 96 positions per quarter.
-Rhythm-pattern notes, saved tempo, program changes and track routing remain
-unresolved. Reject unsupported records rather than silently changing music.
+Stored rhythm-pattern hits can be expanded along the selection list. Saved
+tempo, ROM preset pattern notes, note-off policy, and routing remain unresolved.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ from pathlib import Path
 
 import mido
 
+from . import pattern
 from .core import D20Error, atomic_write, read_file, require_new_output
 
 SONG_SIZE = 27_648
@@ -48,7 +49,7 @@ class SongNotes:
 
 
 def _kind(raw: bytes) -> str:
-    if len(raw) == SONG_SIZE and raw[2] == 3 and raw[0x3B00:0x3B03] == b"\x03\x11\x00":
+    if len(raw) == SONG_SIZE and raw[2] == 3 and pattern.valid_header(*raw[0x3B00:0x3B03]):
         kind, rhythm_start = "SONG", 0x3B00
     elif len(raw) == ALL_SIZE and raw[2] == 3 and raw[0x10] == 1:
         kind, rhythm_start = "ALL", 0x9000
@@ -68,8 +69,8 @@ def _meter(raw: bytes) -> tuple[tuple[tuple[int, int], ...], int]:
         return (), 0
     position = 0
     changes = []
-    for pattern in chain[:end]:
-        numerator = lengths[pattern]
+    for pattern_id in chain[:end]:
+        numerator = lengths[pattern_id]
         if not changes or changes[-1][1] != numerator:
             changes.append((position, numerator))
         position += numerator * POSITIONS_PER_QUARTER
@@ -128,21 +129,26 @@ def decode(raw: bytes) -> SongNotes:
     return SongNotes(kind, tuple(events), meter_changes, pattern_count)
 
 
-def convert(source: Path, destination: Path, *, tempo_bpm: int, force: bool, expected_kind: str | None = None) -> str:
+def convert(source: Path, destination: Path, *, tempo_bpm: int, force: bool,
+            expected_kind: str | None = None, rhythm_track: bool = True,
+            gate_ticks: int = 1) -> str:
     """Write a Type-1 MIDI with one track per stored status lane, never modifying input."""
     source, destination = source.expanduser(), destination.expanduser()
     if destination.suffix.lower() not in {".mid", ".midi"}:
         raise D20Error("BETA Song/All note export writes Standard MIDI .mid/.midi only.")
     if not 4 <= tempo_bpm <= 300:
         raise D20Error("--tempo-bpm must be between 4 and 300; the saved tempo is not decoded yet.")
+    if not 1 <= gate_ticks <= 96:
+        raise D20Error("--gate-ticks must be 1..96 (provisional rhythm note-off length).")
     require_new_output(source, destination, force)
-    parsed = decode(read_file(source))
+    raw = read_file(source)
+    parsed = decode(raw)
     if expected_kind and parsed.kind != expected_kind:
         raise D20Error(f"This is a native {parsed.kind} file; use the '{parsed.kind.lower()}' command.")
     midi = mido.MidiFile(type=1, ticks_per_beat=POSITIONS_PER_QUARTER)
     conductor = mido.MidiTrack()
     conductor.append(mido.MetaMessage("track_name", name="D-20 Song notes BETA", time=0))
-    conductor.append(mido.MetaMessage("text", text="BETA: audition tempo supplied by user; rhythm and channel routing unresolved", time=0))
+    conductor.append(mido.MetaMessage("text", text="BETA: audition tempo supplied by user; rhythm gate and channel routing unresolved", time=0))
     conductor.append(mido.MetaMessage("set_tempo", tempo=mido.bpm2tempo(tempo_bpm), time=0))
     previous = 0
     for position, numerator in parsed.meter_changes:
@@ -162,10 +168,16 @@ def convert(source: Path, destination: Path, *, tempo_bpm: int, force: bool, exp
                                       velocity=event.velocity, time=event.position - previous))
             previous = event.position
         midi.tracks.append(track)
+    rhythm_detail = "rhythm omitted by request"
+    if rhythm_track:
+        drum_track, selections, hits = pattern.expanded_rhythm_track(raw, gate_ticks=gate_ticks)
+        midi.tracks.append(drum_track)
+        rhythm_detail = f"rhythm {selections} selections, {hits} hits"
     buffer = io.BytesIO()
     midi.save(file=buffer)
     atomic_write(destination, buffer.getvalue())
     meters = f"{parsed.pattern_count} pattern selections" if parsed.pattern_count else "meter unavailable"
     return (f"BETA: exported {len(parsed.events)} note events from {parsed.kind} to {destination.name} "
-            f"({len(lanes)} provisional lanes; 96 PPQ; {meters}; audition tempo {tempo_bpm} BPM). "
-            "Saved tempo, rhythm-pattern notes, and track routing remain undecoded.")
+            f"({len(lanes)} provisional lanes; 96 PPQ; {meters}; {rhythm_detail}; "
+            f"audition tempo {tempo_bpm} BPM). Saved tempo, ROM preset notes, "
+            "rhythm gate, and track routing remain undecoded.")

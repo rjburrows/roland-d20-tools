@@ -4,15 +4,37 @@
 
 ### Added
 
+- Documented the C and A/B ROM reverse mapping and published the Ghidra trace
+  scripts and read-only disk probes. Added a 100% branch-aware coverage gate
+  for the Song and rhythm pattern decoders.
+- **BETA** expanded saved rhythm selection track in Song and All note MIDI
+  exports, with explicit rejection of undecoded ROM preset pattern IDs and
+  `--no-rhythm-track` for a Song-lanes-only export. The Rhythm command accepts
+  `--notes pattern|all|track` to write note MIDI for one writable pattern,
+  32 separate pattern tracks, or its saved pattern sequence. Note-off length
+  is configurable with `--gate-ticks`.
+- **BETA** individual writable rhythm-pattern note MIDI export from native
+  Rhythm (`.444`), Song (`.222`), or All (`.111`) files. Keeps simultaneous
+  saved hits, note numbers, velocities, pattern meter, and raw Rhythm Setup
+  settings as MIDI text; requires an audition tempo and uses a configurable
+  provisional note-off gate. Adds synthetic and optional saved-pattern tests.
 - **BETA** one-way note-event MIDI export for native Song (`.222`) and All
   (`.111`) files, using their shared Song region. Exports Type-1 MIDI with
   96 positions per quarter, stored-status lanes, and validated pattern meter.
 - Generated cross-format timing, running-status, error, and output-safety tests.
 
+### Fixed
+
+- Song inspection and MIDI export validate the first stored pattern's header
+  fields, so valid saves with different first-pattern lengths and hit counts
+  are accepted.
+
 ### Limitations
 
-- Saved tempo, original routing/patches and rhythm-pattern notes are not yet
-  decoded. An explicit audition tempo is required; no native round trip.
+- Saved tempo, original routing/patches, ROM preset pattern notes, and
+  hardware note-off policy are not yet decoded. Writable pattern chains are
+  expanded; an explicit audition tempo is required and there is no native
+  note-MIDI round trip.
 
 ## [0.2.0] - 2026-07-31
 
