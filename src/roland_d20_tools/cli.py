@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 import sys
 
-from . import __version__, d110, doctor, finder, inspect, reports, rhythm, song, sound
+from . import __version__, d110, doctor, finder, inspect, pattern, reports, rhythm, song, sound
 from .core import D20Error, parse_device_id
 
 
@@ -80,6 +80,13 @@ def parser() -> argparse.ArgumentParser:
         epilog=examples("d20-tools rhythm TESTRHY.444 TESTRHY.syx"),
     )
     add_converter_arguments(rhythm_parser, "Rhythm (.444), MIDI, or SysEx")
+    rhythm_parser.add_argument("--notes", choices=("pattern", "all", "track"),
+                               help="BETA: export one pattern, all stored patterns, or the saved selection track as note MIDI")
+    rhythm_parser.add_argument("--pattern-id", type=lambda value: int(value, 0), metavar="0x20..0x3F",
+                               help="required with --notes pattern")
+    rhythm_parser.add_argument("--tempo-bpm", type=int, help="required with --notes; audition tempo (4..300)")
+    rhythm_parser.add_argument("--gate-ticks", type=int, default=1, help="BETA rhythm note-off length, 1..96 ticks")
+    rhythm_parser.add_argument("--channel", type=int, default=10, help="BETA rhythm MIDI channel 1..16 (default: 10)")
     d110_parser = commands.add_parser(
         "d110",
         help="EXPERIMENTAL: convert a complete D-20 dump to D-110 SysEx",
@@ -152,13 +159,28 @@ def parser() -> argparse.ArgumentParser:
         native = commands.add_parser(
             name,
             help=f"BETA: export note events from a native {extension} file",
-            description=f"BETA one-way note-only MIDI export from D-20 {extension}. Rhythm-pattern notes, saved tempo and track routing are not yet decoded.",
+            description=f"BETA Song note lanes and an expanded rhythm track from native {extension}. ROM preset patterns, saved tempo and track routing remain unknown.",
             epilog=examples(f"d20-tools {name} TEST{name.upper()}{extension} notes.mid --tempo-bpm 120"),
         )
         native.add_argument("input", type=Path, help=f"source native {extension} file")
         native.add_argument("output", type=Path, help="destination Standard MIDI .mid/.midi file")
         native.add_argument("--tempo-bpm", type=int, required=True, help="explicit audition tempo (4..300); not read from the file")
+        native.add_argument("--gate-ticks", type=int, default=1, help="provisional rhythm note-off length, 1..96 MIDI ticks")
+        native.add_argument("--no-rhythm-track", action="store_true", help="export Song note lanes only; useful when the chain uses unsupported ROM preset IDs")
         native.add_argument("--force", action="store_true", help="replace an existing output")
+    pattern_parser = commands.add_parser(
+        "pattern",
+        help="BETA: export one rhythm pattern from .444, .222, or .111 to note MIDI",
+        description="BETA one-way pattern-hit export. Stored time/note/velocity and meter are ROM-confirmed; gate and tempo are audition choices.",
+        epilog=examples("d20-tools pattern RHYTHM.444 P88.mid --pattern-id 0x3f --tempo-bpm 120"),
+    )
+    pattern_parser.add_argument("input", type=Path, help="native Rhythm .444, Song .222, or All .111")
+    pattern_parser.add_argument("output", type=Path, help="destination Standard MIDI .mid/.midi file")
+    pattern_parser.add_argument("--pattern-id", type=lambda value: int(value, 0), required=True, metavar="0x20..0x3F", help="stored pattern ID (P-51..P-88)")
+    pattern_parser.add_argument("--tempo-bpm", type=int, required=True, help="explicit audition tempo (4..300)")
+    pattern_parser.add_argument("--gate-ticks", type=int, default=1, help="provisional note length, 1..96 MIDI ticks (default: 1)")
+    pattern_parser.add_argument("--channel", type=int, default=10, help="MIDI channel 1..16 (default: 10, drums)")
+    pattern_parser.add_argument("--force", action="store_true", help="replace an existing output")
     return result
 
 
@@ -167,7 +189,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command in {"song", "all"}:
             emit(song.convert(args.input, args.output, tempo_bpm=args.tempo_bpm,
-                              force=args.force, expected_kind=args.command.upper()))
+                              force=args.force, expected_kind=args.command.upper(),
+                              rhythm_track=not args.no_rhythm_track, gate_ticks=args.gate_ticks))
+            return 0
+        if args.command == "pattern":
+            emit(pattern.convert(args.input, args.output, pattern_id=args.pattern_id,
+                                 tempo_bpm=args.tempo_bpm, gate_ticks=args.gate_ticks,
+                                 channel=args.channel - 1, force=args.force))
             return 0
         if args.command == "inspect":
             if args.report:
@@ -197,6 +225,17 @@ def main(argv: list[str] | None = None) -> int:
                 result = runner(args.input)
             emit(result)
             return 0
+        if args.command == "rhythm" and args.notes:
+            if args.tempo_bpm is None:
+                raise D20Error("--tempo-bpm is required with --notes.")
+            emit(pattern.convert_rhythm(args.input, args.output, mode=args.notes,
+                                        pattern_id=args.pattern_id, tempo_bpm=args.tempo_bpm,
+                                        gate_ticks=args.gate_ticks, channel=args.channel - 1,
+                                        force=args.force))
+            return 0
+        if args.command == "rhythm" and (args.pattern_id is not None or args.tempo_bpm is not None
+                                         or args.gate_ticks != 1 or args.channel != 10):
+            raise D20Error("Rhythm note options require --notes pattern, all, or track.")
         device_id = parse_device_id(args.device_id)
         if args.command == "d110":
             emit(d110.convert(args.input, args.output, device_id=device_id, force=args.force, report_path=args.report, report_format=args.report_format))

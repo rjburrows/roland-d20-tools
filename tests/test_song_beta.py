@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import mido
 
-from roland_d20_tools import cli, song
+from roland_d20_tools import cli, pattern, song
 from roland_d20_tools.core import D20Error
 
 
@@ -33,7 +33,13 @@ def fixture(kind: str) -> bytes:
     raw[0x283:0x286] = (base + len(interval0) - 1).to_bytes(3, "little")
     raw[0x286:0x289] = (base + len(interval0 + interval1) - 1).to_bytes(3, "little")
     raw[0x289:0x28C] = b"\xff" * 3
-    raw[0x3B00:0x3B03] = b"\x03\x11\x00"
+    base_pattern = 0x3B00
+    raw[base_pattern:base_pattern + 294] = b"\x03\x11\x00" + b"\xff\x80\x00" * 97
+    empty = base_pattern + 30 * 294
+    active = base_pattern + 31 * 294
+    raw[empty:empty + 294] = b"\x07\x00\x00" + b"\xff\x80\x00" * 97
+    raw[active:active + 294] = b"\x07\x01\x00\x0c\x26\x64" + b"\xff\x80\x00" * 96
+    raw[base_pattern + 0x2900:base_pattern + 0x2F00] = raw[base_pattern + 0x1D00:base_pattern + 0x2300]
     if kind == "SONG":
         return bytes(raw)
     all_data = bytearray(song.ALL_SIZE)
@@ -77,18 +83,27 @@ class SongBetaTests(unittest.TestCase):
                     self.assertEqual(cli.main([kind.lower(), str(source), str(dest), "--tempo-bpm", "120"]), 0)
                 self.assertIn("BETA: exported 6 note events", stdout.getvalue())
                 midi = mido.MidiFile(dest)
-                self.assertEqual((midi.type, midi.ticks_per_beat, len(midi.tracks)), (1, 96, 3))
+                self.assertEqual((midi.type, midi.ticks_per_beat, len(midi.tracks)), (1, 96, 4))
                 self.assertEqual([(m.numerator, m.denominator) for m in midi.tracks[0]
                                   if m.type == "time_signature"], [(8, 4)])
                 self.assertEqual([m.tempo for m in midi.tracks[0] if m.type == "set_tempo"], [500_000])
                 notes = []
-                for track in midi.tracks[1:]:
+                for track in midi.tracks[1:-1]:
                     tick = 0
                     for message in track:
                         tick += message.time
                         if message.type == "note_on":
                             notes.append((tick, message.channel, message.note, message.velocity))
                 self.assertEqual(sorted(notes), sorted(expected))
+                rhythm = midi.tracks[-1]
+                drum_time = 0
+                drum_events = []
+                for message in rhythm:
+                    drum_time += message.time
+                    if message.type in ("note_on", "note_off"):
+                        drum_events.append((drum_time, message.type, message.channel, message.note, message.velocity))
+                self.assertEqual(drum_events, [(816, "note_on", 9, 38, 100),
+                                               (817, "note_off", 9, 38, 0)])
                 results.append(sorted(notes))
             self.assertEqual(results[0], results[1])
 
@@ -135,6 +150,27 @@ class SongBetaTests(unittest.TestCase):
         raw[0x23B + 0x3F] = 3
         parsed = song.decode(raw)
         self.assertEqual(parsed.meter_changes, ((0, 8), (768, 3)))
+
+    def test_unsupported_preset_rejects_rhythm_without_losing_song_only_option(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            raw = bytearray(fixture("SONG"))
+            raw[0x44] = 0x01
+            raw[0x23B + 0x01] = 4
+            source, output = Path(directory) / "song.222", Path(directory) / "song.mid"
+            source.write_bytes(raw)
+            with self.assertRaisesRegex(D20Error, "ROM preset"):
+                song.convert(source, output, tempo_bpm=120, force=False)
+            self.assertFalse(output.exists())
+            song.convert(source, output, tempo_bpm=120, force=False, rhythm_track=False)
+            self.assertEqual(len(mido.MidiFile(output).tracks), 3)
+            with self.assertRaisesRegex(D20Error, "gate-ticks"):
+                song.convert(source, output, tempo_bpm=120, force=True, gate_ticks=0)
+
+    def test_song_duration_conflict_rejects_rhythm_expansion(self) -> None:
+        raw = bytearray(fixture("SONG"))
+        raw[0x23B + 0x3F] = 4
+        with self.assertRaisesRegex(D20Error, "disagrees"):
+            pattern.expanded_rhythm_track(raw, gate_ticks=1)
 
 
 if __name__ == "__main__":
