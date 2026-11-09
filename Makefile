@@ -15,6 +15,7 @@ test:
 coverage:
 	$(PYTHON) -m coverage run -m unittest discover -s tests -v
 	$(PYTHON) -m coverage report
+	$(PYTHON) -m coverage report --include '*/song.py,*/pattern.py' --fail-under=100
 
 check: lint coverage
 

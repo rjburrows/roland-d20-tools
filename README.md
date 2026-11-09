@@ -111,6 +111,8 @@ flowchart LR
 See [the architecture guide](docs/architecture.md) for the module-level map and
 the [memory-address reference](docs/memory-map.md) for the source-derived D-20
 address and native-file layout tables.
+The [firmware reverse-mapping guide](docs/firmware-reverse-mapping.md) records
+the Ghidra workflow, ROM function addresses, and evidence behind the MIDI export.
 
 ## How to choose a command
 

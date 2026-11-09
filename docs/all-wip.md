@@ -20,6 +20,8 @@ the embedded Sound/Rhythm SysEx domains. `d20-tools inspect`
 can inventory those embedded domains. This command is one-way; retain the
 original `.111` file. See [Song note export](song-wip.md) for the ROM-backed
 record grammar, timing, and BETA validation limits.
+See the [firmware reverse-mapping guide](firmware-reverse-mapping.md) for the
+shared Song header, event index, and embedded rhythm offsets.
 
 The embedded writable rhythm patterns can also be exported **one at a time**:
 `d20-tools pattern MYBACKUP.111 pattern.mid --pattern-id 0x3f --tempo-bpm 120`.

@@ -49,7 +49,7 @@ class SongNotes:
 
 
 def _kind(raw: bytes) -> str:
-    if len(raw) == SONG_SIZE and raw[2] == 3 and raw[0x3B00:0x3B03] == b"\x03\x11\x00":
+    if len(raw) == SONG_SIZE and raw[2] == 3 and pattern.valid_header(*raw[0x3B00:0x3B03]):
         kind, rhythm_start = "SONG", 0x3B00
     elif len(raw) == ALL_SIZE and raw[2] == 3 and raw[0x10] == 1:
         kind, rhythm_start = "ALL", 0x9000

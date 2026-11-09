@@ -6,6 +6,9 @@ replaces, Roland's manuals. A SysEx DT1 address has three 7-bit bytes:
 `MSB MID LSB`. Within an area, the byte offset is `MID × 128 + LSB`; all ranges
 below are inclusive.
 
+For the Ghidra function inventory and how ROM addresses relate to disk
+offsets, see the [firmware reverse-mapping guide](firmware-reverse-mapping.md).
+
 ## SysEx areas
 
 | Address area | Bytes | Used by | Meaning |

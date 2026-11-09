@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 import io
 import os
 from pathlib import Path
@@ -39,8 +39,6 @@ def rhythm_with_chain() -> bytes:
         offset = 0x100 + index * pattern.PATTERN_SIZE
         raw[offset:offset + pattern.PATTERN_SIZE] = b"\x03\x00\x00" + b"\xff\x80\x00" * 97
     raw[0x2600:0x2605] = b"\x03\x00\x3e\x3f\x3f"
-    empty = 0x100 + 30 * pattern.PATTERN_SIZE
-    raw[empty:empty + pattern.PATTERN_SIZE] = b"\x03\x00\x00" + b"\xff\x80\x00" * 97
     raw[0x2A00:0x3000] = raw[0x1E00:0x2400]
     return bytes(raw)
 
@@ -100,6 +98,41 @@ class PatternBetaTests(unittest.TestCase):
         with self.assertRaisesRegex(D20Error, "ROM preset"):
             pattern.expanded_rhythm_track(raw, gate_ticks=1)
 
+        with self.assertRaisesRegex(D20Error, "native"):
+            pattern.rhythm_chain(b"truncated")
+        for chain in (b"\xff", b"\x3f"):
+            raw = bytearray(fixture("SONG"))
+            raw[0x44] = chain[0]
+            with self.subTest(chain=chain), self.assertRaisesRegex(D20Error, "FF terminator"):
+                pattern.rhythm_chain(raw)
+
+    def test_export_modes_reject_invalid_cli_options_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "rhythm.444"
+            source.write_bytes(rhythm_with_chain())
+            output = Path(directory) / "out.mid"
+            for command, options, message in (
+                ("rhythm", ["--notes", "all"], "--tempo-bpm is required"),
+                ("rhythm", ["--tempo-bpm", "120"], "Rhythm note options require"),
+                ("rhythm", ["--notes", "pattern", "--tempo-bpm", "120"], "--pattern-id is required"),
+                ("rhythm", ["--notes", "all", "--tempo-bpm", "120", "--pattern-id", "0x3f"], "--pattern-id is required only"),
+                ("rhythm", ["--notes", "track", "--tempo-bpm", "301"], "--tempo-bpm"),
+                ("rhythm", ["--notes", "track", "--tempo-bpm", "120", "--gate-ticks", "97"], "--gate-ticks"),
+                ("pattern", ["--pattern-id", "0x3f", "--tempo-bpm", "120", "--channel", "17"], "--channel"),
+            ):
+                with self.subTest(command=command, options=options), redirect_stderr(io.StringIO()) as err:
+                    self.assertEqual(cli.main([command, str(source), str(output), *options]), 2)
+                    self.assertIn(message, err.getvalue())
+                    self.assertFalse(output.exists())
+            with self.assertRaisesRegex(D20Error, "--notes must be"):
+                pattern.convert_rhythm(source, output, mode="unknown", pattern_id=None, tempo_bpm=120)
+            wrong_suffix = output.with_suffix(".syx")
+            with self.assertRaisesRegex(D20Error, "native .444 input"):
+                pattern.convert_rhythm(source, wrong_suffix, mode="track", pattern_id=None, tempo_bpm=120)
+            with self.assertRaisesRegex(D20Error, "Standard MIDI"):
+                pattern.convert(source, wrong_suffix, pattern_id=0x3F, tempo_bpm=120)
+            self.assertFalse(wrong_suffix.exists())
+
     def test_three_containers_produce_identical_note_tracks_and_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             outputs = []
@@ -126,7 +159,12 @@ class PatternBetaTests(unittest.TestCase):
     def test_reject_corrupt_hits_terminator_and_mirror_without_output(self) -> None:
         raw = fixture("RHYTHM")
         start = 0x100 + 31 * pattern.PATTERN_SIZE
-        for offset, replacement, reason in ((start + 3, 96, "Invalid pattern hit"),
+        for offset, replacement, reason in ((0, 0, "Rhythm header"),
+                                            (start, 8, "Invalid pattern header"),
+                                            (start + 1, 97, "Invalid pattern header"),
+                                            (start + 2, 1, "Invalid pattern header"),
+                                            (start + 3, 96, "Invalid pattern hit"),
+                                            (start + 4, 128, "Invalid pattern hit"),
                                             (start + 5, 0, "Invalid pattern hit"),
                                             (start + 12, 0, "terminator"),
                                             (0x2A00, 1, "mirror")):
@@ -136,6 +174,12 @@ class PatternBetaTests(unittest.TestCase):
                 pattern.decode(damaged, 0x3F)
         with self.assertRaisesRegex(D20Error, "0x20..0x3F"):
             pattern.decode(raw, 0x1F)
+        with self.assertRaisesRegex(D20Error, "Expected a native"):
+            pattern.decode(raw[:-1], 0x3F)
+        raw = bytearray(fixture("ALL"))
+        raw[0x10] = 0
+        with self.assertRaisesRegex(D20Error, "ALL header"):
+            pattern.decode(raw, 0x3F)
 
     def test_output_safety_and_audition_parameters(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

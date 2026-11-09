@@ -4,6 +4,9 @@
 
 ### Added
 
+- Documented the C and A/B ROM reverse mapping and published the Ghidra trace
+  scripts and read-only disk probes. Added a 100% branch-aware coverage gate
+  for the Song and rhythm pattern decoders.
 - **BETA** expanded saved rhythm selection track in Song and All note MIDI
   exports, with explicit rejection of undecoded ROM preset pattern IDs and
   `--no-rhythm-track` for a Song-lanes-only export. The Rhythm command accepts
@@ -19,6 +22,12 @@
   (`.111`) files, using their shared Song region. Exports Type-1 MIDI with
   96 positions per quarter, stored-status lanes, and validated pattern meter.
 - Generated cross-format timing, running-status, error, and output-safety tests.
+
+### Fixed
+
+- Song inspection and MIDI export validate the first stored pattern's header
+  fields, so valid saves with different first-pattern lengths and hit counts
+  are accepted.
 
 ### Limitations
 

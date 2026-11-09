@@ -87,3 +87,6 @@ If the selection list includes a ROM preset ID (`0x00`–`0x1F`), track expansio
 reports an error: the preset notes are not yet decoded. The existing default
 `d20-tools rhythm RHYTHM.444 RHYTHM.mid` still exports the reversible SysEx
 representation; `--notes` selects the new note-event output.
+
+See the [firmware reverse-mapping guide](firmware-reverse-mapping.md) for the
+A/B editor trace, saved pattern layout, and evidence for the timing conversion.

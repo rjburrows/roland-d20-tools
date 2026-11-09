@@ -37,6 +37,8 @@ records cause a clear error before any output is written. The BETA grammar was
 validated against a paired Song/All disk capture and the C 1.11 ROM, but other
 firmware versions and compositions may contain event types this exporter does
 not yet support. Run `d20-tools inspect MYSONG.222` for an inventory.
+The [firmware reverse-mapping guide](firmware-reverse-mapping.md) documents
+the ROM reader, recorder, and the evidence for the file offsets.
 
 To export a **single saved rhythm pattern** from the Song container as drum
 notes, use `d20-tools pattern MYSONG.222 pattern.mid --pattern-id 0x3f

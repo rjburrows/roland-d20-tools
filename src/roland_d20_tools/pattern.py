@@ -45,6 +45,11 @@ class Pattern:
     setup: tuple[tuple[int, bytes], ...]  # observed notes and their raw 09H records
 
 
+def valid_header(meter: int, count: int, reserved: int) -> bool:
+    """Check the three bytes at the start of a stored pattern record."""
+    return meter <= 7 and count <= 96 and reserved == 0
+
+
 def decode(raw: bytes, pattern_id: int) -> Pattern:
     """Read one writable pattern ID 20..3F, without assuming a chain or gate."""
     if not 0x20 <= pattern_id <= 0x3F:
@@ -64,19 +69,20 @@ def decode(raw: bytes, pattern_id: int) -> Pattern:
     start = base + (pattern_id - 0x20) * PATTERN_SIZE
     record = raw[start:start + PATTERN_SIZE]
     meter, count, reserved = record[:3]
-    if meter > 7 or count > 96 or reserved != 0:
+    if not valid_header(meter, count, reserved):
         raise D20Error(f"Invalid pattern header at byte 0x{start:X}.")
     beats = meter + 1
     hits: list[Hit] = []
     previous = -1
     for i in range(count):
         position, note, velocity = record[3 + i * 3:6 + i * 3]
-        if not previous <= position < beats * RAW_POSITIONS_PER_QUARTER or not 0 <= note < 128 or not 1 <= velocity < 128:
+        if not previous <= position < beats * RAW_POSITIONS_PER_QUARTER or note >= 128 or not 1 <= velocity < 128:
             raise D20Error(f"Invalid pattern hit at byte 0x{start + 3 + i * 3:X}.")
         hits.append(Hit(position, note, velocity, start + 3 + i * 3))
         previous = position
     pad = record[3 + count * 3:]
-    if len(pad) < 3 or len(pad) % 3 or any(pad[i:i + 3] not in (b"\xff\x80\x00", b"\xff\x00\x00") for i in range(0, len(pad), 3)):
+    # The fixed 294-byte record and count limit leave at least one complete triple.
+    if any(pad[i:i + 3] not in (b"\xff\x80\x00", b"\xff\x00\x00") for i in range(0, len(pad), 3)):
         raise D20Error(f"Invalid pattern terminator/padding at byte 0x{start + 3 + count * 3:X}.")
 
     setup_start = base + 0x2700

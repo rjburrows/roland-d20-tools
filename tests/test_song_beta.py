@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import mido
 
-from roland_d20_tools import cli, pattern, song
+from roland_d20_tools import cli, inspect, pattern, song
 from roland_d20_tools.core import D20Error
 
 
@@ -34,7 +34,7 @@ def fixture(kind: str) -> bytes:
     raw[0x286:0x289] = (base + len(interval0 + interval1) - 1).to_bytes(3, "little")
     raw[0x289:0x28C] = b"\xff" * 3
     base_pattern = 0x3B00
-    raw[base_pattern:base_pattern + 294] = b"\x03\x11\x00" + b"\xff\x80\x00" * 97
+    raw[base_pattern:base_pattern + 294] = b"\x02\x00\x00" + b"\xff\x80\x00" * 97
     empty = base_pattern + 30 * 294
     active = base_pattern + 31 * 294
     raw[empty:empty + 294] = b"\x07\x00\x00" + b"\xff\x80\x00" * 97
@@ -70,6 +70,7 @@ class SongBetaTests(unittest.TestCase):
                 source = Path(directory) / (kind + extension)
                 dest = Path(directory) / (kind + ".mid")
                 source.write_bytes(fixture(kind))
+                self.assertEqual(inspect.native_type(source)[0], kind)
                 parsed = song.decode(source.read_bytes())
                 self.assertEqual(parsed.kind, kind)
                 self.assertEqual(parsed.lanes, (0, 1))
@@ -126,6 +127,8 @@ class SongBetaTests(unittest.TestCase):
             source = Path(directory) / "song.222"
             output = Path(directory) / "notes.mid"
             source.write_bytes(fixture("SONG"))
+            with self.assertRaisesRegex(D20Error, "Standard MIDI"):
+                song.convert(source, output.with_suffix(".syx"), tempo_bpm=120, force=False)
             with self.assertRaisesRegex(D20Error, "use the 'song' command"):
                 song.convert(source, output, tempo_bpm=120, force=False, expected_kind="ALL")
             self.assertFalse(output.exists())
@@ -144,6 +147,51 @@ class SongBetaTests(unittest.TestCase):
             self.assertEqual(output.read_bytes(), original)
             song.convert(source, output, tempo_bpm=100, force=True)
             self.assertNotEqual(output.read_bytes(), original)
+
+    def test_malformed_song_rejected_at_each_decode_stage(self) -> None:
+        for offset, value, message in (
+            (2, b"\x00", "recognised native"),
+            (0x3B00, b"\x08", "recognised native"),
+            (0x6400, b"\x01", "Rhythm mirror"),
+            (0x41, b"\0" * 3, "physical base pointer"),
+            (0x283, b"\xff" * 3, "missing its FF boundaries"),
+            (0x1A00, b"\xc0", "Invalid Song position"),
+            (0x1A03, b"\x80", "Invalid Song note data"),
+        ):
+            raw = bytearray(fixture("SONG"))
+            raw[offset:offset + len(value)] = value
+            with self.subTest(offset=offset), self.assertRaisesRegex(D20Error, message):
+                song.decode(raw)
+        raw = bytearray(fixture("SONG"))
+        raw[0x283:0x289] = raw[0x41:0x44] + b"\xff" * 3
+        raw[0x1A00] = 0xFF
+        with self.assertRaisesRegex(D20Error, "No supported Song note events"):
+            song.decode(raw)
+
+    def test_cli_note_only_export_can_omit_unvalidated_meter(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "song.222"
+            output = Path(directory) / "song.mid"
+            raw = bytearray(fixture("SONG"))
+            raw[0x23B + 0x3E] = 0
+            source.write_bytes(raw)
+            with redirect_stdout(io.StringIO()) as stdout:
+                self.assertEqual(cli.main(["song", str(source), str(output), "--tempo-bpm", "120", "--no-rhythm-track"]), 0)
+            self.assertIn("meter unavailable", stdout.getvalue())
+            self.assertEqual(len(mido.MidiFile(output).tracks), 3)
+            self.assertFalse(any(msg.type == "time_signature" for msg in mido.MidiFile(output).tracks[0]))
+
+    def test_full_index_can_end_at_the_region_limit(self) -> None:
+        raw = bytearray(fixture("SONG"))
+        expected = song.decode(raw).events
+        pointer = int.from_bytes(raw[0x286:0x289], "little")
+        base = int.from_bytes(raw[0x41:0x44], "little")
+        # A full table can address successive empty intervals after the music.
+        for offset in range(0x289, song.INDEX_END - 2, 3):
+            pointer += 1
+            raw[offset:offset + 3] = pointer.to_bytes(3, "little")
+            raw[song.EVENT_START + pointer - base] = 0xFF
+        self.assertEqual(song.decode(raw).events, expected)
 
     def test_meter_changes_are_placed_at_pattern_boundaries(self) -> None:
         raw = bytearray(fixture("SONG"))

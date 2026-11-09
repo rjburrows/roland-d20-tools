@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 from .core import D20Error, MemoryImage, assemble_partial, atomic_write, make_messages, note_name, printable_text, read_file, require_new_output, scan_messages, scan_midi, scan_syx, user_tone_names
-from . import reports
+from . import pattern, reports
 
 
 SOUND_FILE_SIZE = 24_576
@@ -61,7 +61,7 @@ def native_type(path: Path) -> tuple[str, str] | None:
     if (
         len(raw) == SONG_FILE_SIZE
         and raw[2] == 0x03
-        and raw[SONG_EMBEDDED_RHYTHM_OFFSET : SONG_EMBEDDED_RHYTHM_OFFSET + 3] == b"\x03\x11\x00"
+        and pattern.valid_header(*raw[SONG_EMBEDDED_RHYTHM_OFFSET : SONG_EMBEDDED_RHYTHM_OFFSET + 3])
     ):
         return "SONG", _disk_name(raw, source)
     if len(raw) == ALL_FILE_SIZE and raw[2] == 0x03 and raw[0x10] == 0x01:
