@@ -1,7 +1,8 @@
 # All-file note export (BETA)
 
 ```sh
-d20-tools all MYBACKUP.111 MYBACKUP-notes.mid --tempo-bpm 120
+d20-tools all MYBACKUP.111 MYBACKUP-notes.mid
+d20-tools all MYBACKUP.111 audition.mid --tempo-bpm 120
 ```
 
 Native `.111` All files include a Song header, event index, and event region
@@ -11,8 +12,10 @@ note events to a Type-1 Standard MIDI file with a separate rhythm track
 following the embedded Song pattern list. It does not require a separate
 `.222` file or assume that two independently saved files contain the same song.
 
-`--tempo-bpm` is an explicit audition value; the saved tempo has not been
-decoded. Stored rhythm-pattern hits are expanded on channel 10, with
+The saved tempo at header offset `0x36` is used by default, with the same
+validated code range and ROM formula as Song export. `--tempo-bpm 4..300`
+overrides it. An invalid saved code requires an override. Stored
+rhythm-pattern hits are expanded on channel 10, with
 `--gate-ticks` controlling the provisional note-off length. ROM preset pattern
 notes are unsupported: use `--no-rhythm-track` for Song note lanes only if the
 chain includes one. The output omits original channel and patch routing and

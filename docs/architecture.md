@@ -34,7 +34,8 @@ kept separate because D-110 hardware round-trip validation is still pending.
 `song.py` decodes the shared Song region in native `.222` and `.111` files to
 provisional note lanes. `pattern.py` validates stored pattern hit triples and
 expands the saved selection list to an additional rhythm MIDI track for Song,
-All, or Rhythm note export. The saved tempo, ROM preset note records, and
+All, or Rhythm note export. Song/All tempo comes from the saved header or an
+explicit override. ROM preset note records and
 hardware note-off policy remain outside these BETA decoders.
 The CLI dispatches one explicit subcommand and never guesses a file type. See
 the [memory-address reference](memory-map.md) for the layouts used by each

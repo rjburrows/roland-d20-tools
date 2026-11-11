@@ -4,6 +4,11 @@
 
 ### Added
 
+- **BETA** saved-tempo extraction for Song and All exports and inspection.
+  Header byte `0x36` gives `40 + 2 × code` BPM for codes `0x00..0x69`.
+  Song/All export uses it by default and accepts `--tempo-bpm` as an override.
+  The executed Ghidra trace documents the load path and timer reapplication.
+
 - Documented the C and A/B ROM reverse mapping and published the Ghidra trace
   scripts and read-only disk probes. Added a 100% branch-aware coverage gate
   for the Song and rhythm pattern decoders.
@@ -31,14 +36,19 @@
 
 ### Limitations
 
-- Saved tempo, original routing/patches, ROM preset pattern notes, and
+- Original routing/patches, ROM preset pattern notes, and
   hardware note-off policy are not yet decoded. Writable pattern chains are
-  expanded; an explicit audition tempo is required and there is no native
-  note-MIDI round trip.
+  expanded. Standalone Rhythm and individual pattern exports require an
+  explicit audition tempo. There is no native note-MIDI round trip.
 
 ## [0.2.0] - 2026-07-31
 
 ### Added
+
+- **BETA** saved-tempo extraction for Song and All exports and inspection.
+  Header byte `0x36` gives `40 + 2 × code` BPM for codes `0x00..0x69`.
+  Song/All export uses it by default and accepts `--tempo-bpm` as an override.
+  The executed Ghidra trace documents the load path and timer reapplication.
 
 - Experimental one-way D-20 to D-110 SysEx conversion, with validated Tone,
   Timbre, and Rhythm Setup output plus Markdown, HTML, JSON, and CSV reports.
@@ -54,6 +64,11 @@
 ## [0.1.0] - 2026-07-30
 
 ### Added
+
+- **BETA** saved-tempo extraction for Song and All exports and inspection.
+  Header byte `0x36` gives `40 + 2 × code` BPM for codes `0x00..0x69`.
+  Song/All export uses it by default and accepts `--tempo-bpm` as an override.
+  The executed Ghidra trace documents the load path and timer reapplication.
 
 - Safe local conversion between native D-20 Sound (`.333`) and Rhythm (`.444`)
   files and standard MIDI or raw SysEx.

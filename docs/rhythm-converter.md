@@ -46,7 +46,9 @@ position is one of 24 positions per quarter note and is scaled to 96 MIDI
 ticks per quarter. Concurrent hits remain concurrent. The source file is not
 modified, and existing output requires `--force`.
 
-`--tempo-bpm` is mandatory because the saved tempo is not decoded. MIDI
+`--tempo-bpm` is mandatory for individual pattern export because patterns
+contain relative timing. The Song/All commands can read their container
+tempo when exporting the whole arrangement. MIDI
 channel 10 is the default drum channel; `--channel 1..16` selects another.
 `--gate-ticks 1..96` chooses the note-off length, defaulting to one tick:
 **there is no stored gate in the pattern hit record**. Neither the exact
@@ -82,7 +84,8 @@ All three modes require `--tempo-bpm 4..300`; `--gate-ticks 1..96` controls
 the provisional note length (default one tick), and `--channel 1..16` sets the
 output channel (default 10). The selection list and pattern note bytes are
 separate from the `09H` Rhythm Setup; the pattern does not store a tempo.
-The saved-tempo field has not been established well enough to use automatically.
+Standalone Rhythm note export requires an explicit tempo. The saved Song/All
+tempo reader applies to their arrangement exports.
 If the selection list includes a ROM preset ID (`0x00`–`0x1F`), track expansion
 reports an error: the preset notes are not yet decoded. The existing default
 `d20-tools rhythm RHYTHM.444 RHYTHM.mid` still exports the reversible SysEx

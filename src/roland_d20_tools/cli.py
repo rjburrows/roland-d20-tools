@@ -159,12 +159,12 @@ def parser() -> argparse.ArgumentParser:
         native = commands.add_parser(
             name,
             help=f"BETA: export note events from a native {extension} file",
-            description=f"BETA Song note lanes and an expanded rhythm track from native {extension}. ROM preset patterns, saved tempo and track routing remain unknown.",
+            description=f"BETA Song note lanes, saved tempo and an expanded rhythm track from native {extension}. ROM preset patterns and track routing remain unknown.",
             epilog=examples(f"d20-tools {name} TEST{name.upper()}{extension} notes.mid --tempo-bpm 120"),
         )
         native.add_argument("input", type=Path, help=f"source native {extension} file")
         native.add_argument("output", type=Path, help="destination Standard MIDI .mid/.midi file")
-        native.add_argument("--tempo-bpm", type=int, required=True, help="explicit audition tempo (4..300); not read from the file")
+        native.add_argument("--tempo-bpm", type=int, help="override the saved Song tempo (4..300 BPM); default: read the file")
         native.add_argument("--gate-ticks", type=int, default=1, help="provisional rhythm note-off length, 1..96 MIDI ticks")
         native.add_argument("--no-rhythm-track", action="store_true", help="export Song note lanes only; useful when the chain uses unsupported ROM preset IDs")
         native.add_argument("--force", action="store_true", help="replace an existing output")

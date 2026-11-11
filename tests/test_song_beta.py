@@ -60,6 +60,44 @@ class SongBetaTests(unittest.TestCase):
         self.assertEqual(song_notes.meter_changes, all_notes.meter_changes)
         self.assertEqual((len(song_notes.events), song_notes.lanes, song_notes.pattern_count),
                          (2044, (0, 1, 7), 51))
+        self.assertEqual((song.saved_tempo(native_song), song.saved_tempo(native_all)), (118, 118))
+
+    def test_saved_tempo_defaults_and_explicit_override_for_both_containers(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            for kind, extension in (("SONG", ".222"), ("ALL", ".111")):
+                source = Path(directory) / (kind + extension)
+                output = Path(directory) / (kind + ".mid")
+                for code, bpm in ((0, 40), (0x27, 118), (0x28, 120), (0x69, 250)):
+                    raw = bytearray(fixture(kind))
+                    raw[0x36] = code
+                    source.write_bytes(raw)
+                    self.assertEqual(song.saved_tempo(raw), bpm)
+                    with redirect_stdout(io.StringIO()) as stdout:
+                        self.assertEqual(cli.main([kind.lower(), str(source), str(output), "--force"]), 0)
+                    self.assertIn(f"saved tempo {bpm} BPM", stdout.getvalue())
+                    midi = mido.MidiFile(output)
+                    self.assertEqual([m.tempo for m in midi.tracks[0] if m.type == "set_tempo"],
+                                     [mido.bpm2tempo(bpm)])
+                    self.assertIn(f"Saved tempo {bpm} BPM", inspect._song_metadata(source, (kind, "TEST"))[-1][1])
+                    self.assertEqual(source.read_bytes(), raw)
+                song.convert(source, output, tempo_bpm=119, force=True)
+                midi = mido.MidiFile(output)
+                self.assertEqual([m.tempo for m in midi.tracks[0] if m.type == "set_tempo"], [mido.bpm2tempo(119)])
+                self.assertTrue(any(m.type == "text" and "override tempo 119 BPM" in m.text for m in midi.tracks[0]))
+
+    def test_invalid_saved_tempo_requires_override_before_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source, output = Path(directory) / "song.222", Path(directory) / "song.mid"
+            raw = bytearray(fixture("SONG"))
+            raw[0x36] = 0x6A
+            source.write_bytes(raw)
+            with self.assertRaisesRegex(D20Error, "Invalid saved tempo code.*--tempo-bpm"):
+                song.convert(source, output, force=False)
+            self.assertFalse(output.exists())
+            self.assertIn("saved tempo unavailable", inspect.report(source))
+            self.assertIn("Saved tempo unavailable", inspect._song_metadata(source, ("SONG", "TEST"))[-1][1])
+            song.convert(source, output, tempo_bpm=120, force=False)
+            self.assertEqual([m.tempo for m in mido.MidiFile(output).tracks[0] if m.type == "set_tempo"], [500000])
 
     def test_synthetic_running_status_absolute_time_and_midi_for_both_containers(self) -> None:
         expected = [(0, 0, 60, 100), (16, 0, 62, 80), (48, 0, 60, 0),
