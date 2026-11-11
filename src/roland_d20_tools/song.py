@@ -29,6 +29,20 @@ POSITIONS_PER_QUARTER = 96
 
 
 @dataclass(frozen=True, slots=True)
+class SavedSetup:
+    reverb_mode: int
+    reverb_time: int
+    reverb_level: int
+    rhythm_level: int
+
+    @property
+    def description(self) -> str:
+        return (f"D-20 saved setup (BETA): reverb mode={self.reverb_mode}, "
+                f"time={self.reverb_time}, level={self.reverb_level}; "
+                f"rhythm level={self.rhythm_level} (native units; not GM CC values)")
+
+
+@dataclass(frozen=True, slots=True)
 class NoteEvent:
     position: int
     status: int
@@ -86,6 +100,22 @@ def saved_tempo(raw: bytes) -> int:
         raise D20Error(f"Invalid saved tempo code 0x{code:02X} at byte 0x36; "
                        "use --tempo-bpm to supply an explicit override.")
     return 40 + 2 * code
+
+
+def saved_setup(raw: bytes) -> SavedSetup | None:
+    """Read the header's ROM-traced D859 reply; never invent absent settings.
+
+    Save captures [88, reverb mode, time, 89, reverb level, rhythm level]
+    at 16..1B. Replay depends on device mode, so preserve values as metadata.
+    """
+    _kind(raw)
+    record = raw[0x16:0x1C]
+    if record[0] != 0x88 or record[3] != 0x89:
+        return None
+    values = (record[1], record[2], record[4], record[5])
+    if any(value > 0x7F for value in values):
+        raise D20Error("Invalid saved setup: header 0x16..0x1B contains non-7-bit data.")
+    return SavedSetup(*values)
 
 
 def decode(raw: bytes) -> SongNotes:
@@ -161,11 +191,14 @@ def convert(source: Path, destination: Path, *, tempo_bpm: int | None = None, fo
         raise D20Error(f"This is a native {parsed.kind} file; use the '{parsed.kind.lower()}' command.")
     tempo_source = "saved" if tempo_bpm is None else "override"
     effective_tempo = saved_tempo(raw) if tempo_bpm is None else tempo_bpm
+    setup = saved_setup(raw)
     midi = mido.MidiFile(type=1, ticks_per_beat=POSITIONS_PER_QUARTER)
     conductor = mido.MidiTrack()
     conductor.append(mido.MetaMessage("track_name", name="D-20 Song notes BETA", time=0))
     conductor.append(mido.MetaMessage("text", text=f"BETA: {tempo_source} tempo {effective_tempo} BPM; rhythm gate and channel routing unresolved", time=0))
     conductor.append(mido.MetaMessage("set_tempo", tempo=mido.bpm2tempo(effective_tempo), time=0))
+    if setup is not None:
+        conductor.append(mido.MetaMessage("text", text=setup.description, time=0))
     previous = 0
     for position, numerator in parsed.meter_changes:
         conductor.append(mido.MetaMessage("time_signature", numerator=numerator, denominator=4, time=position - previous))

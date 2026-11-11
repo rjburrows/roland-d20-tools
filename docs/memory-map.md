@@ -6,6 +6,11 @@ replaces, Roland's manuals. A SysEx DT1 address has three 7-bit bytes:
 `MSB MID LSB`. Within an area, the byte offset is `MID × 128 + LSB`; all ranges
 below are inclusive.
 
+Native Song/All headers also contain a separate six-byte setup pair at file
+`0016–001B`: `88, reverb mode, time, 89, reverb level, rhythm level`.
+This is device protocol data, not a DT1 address area or Song note event.
+The [saved-state trace](saved-initial-state.md) documents its capture and replay.
+
 For the Ghidra function inventory and how ROM addresses relate to disk
 offsets, see the [firmware reverse-mapping guide](firmware-reverse-mapping.md).
 
