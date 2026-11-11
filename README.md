@@ -26,8 +26,8 @@ D-20 file types described below. `inspect` also identifies native Song (`.222`)
 and All (`.111`) containers by their contents. BETA Song/All note export and
 individual stored rhythm-pattern note export are available. SONG and ALL now
 expand saved pattern selections into a separate rhythm MIDI track; `.444` can
-export one, all, or its saved selection track. Saved tempo and ROM preset
-pattern notes are still under research.
+export one, all, or its saved selection track. SONG and ALL read their saved
+tempo by default. ROM preset pattern notes are still under research.
 
 ## Install
 
@@ -61,8 +61,8 @@ d20-tools rhythm TESTRHY.444 TESTRHY.syx
 d20-tools rhythm TESTRHY.444 track.mid --notes track --tempo-bpm 120
 d20-tools rhythm TESTRHY.444 patterns.mid --notes all --tempo-bpm 120
 d20-tools pattern TESTRHY.444 pattern.mid --pattern-id 0x3f --tempo-bpm 120
-d20-tools song MYSONG.222 MYSONG-notes.mid --tempo-bpm 120
-d20-tools all MYBACKUP.111 MYBACKUP-notes.mid --tempo-bpm 120
+d20-tools song MYSONG.222 MYSONG-notes.mid
+d20-tools all MYBACKUP.111 MYBACKUP-notes.mid
 d20-tools d110 D20BACKUP.mid D110-SNDRHY.syx --report D110-SNDRHY.md
 ```
 
@@ -192,8 +192,8 @@ d20-tools --version
 ```
 
 `song` and `all` export discrete Song note events and expand the saved rhythm
-selection list into a separate drum MIDI track. They require an explicit
-`--tempo-bpm` audition value; the file's saved tempo is not decoded yet.
+selection list into a separate drum MIDI track. They read the saved tempo
+from the file by default. Use `--tempo-bpm` to override it for audition.
 The BETA output includes candidate meter changes and stored rhythm-pattern
 hits, but not ROM preset pattern notes, patches, or proven original channel
 routing. Export one stored pattern separately with `d20-tools pattern`.

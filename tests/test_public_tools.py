@@ -413,7 +413,7 @@ class PublicConverterTests(unittest.TestCase):
             self.assertIn("Valid messages: 78", song_output)
             self.assertIn("0AH  Rhythm Pattern: 64 message(s)", song_output)
             self.assertIn("Song event stream: 14,848 bytes", song_output)
-            self.assertIn("saved tempo not decoded", song_output)
+            self.assertIn("saved tempo 40 BPM", song_output)
             self.assertTrue(song_output.endswith("This is a SONG file."))
             song_report = root / "song-report.html"
             output = io.StringIO()

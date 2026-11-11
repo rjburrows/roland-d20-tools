@@ -55,15 +55,15 @@ These observations close the first-buffer-origin and tempo-reapplication questio
 
 The physical ROM overlay and MMU/DMA interpretation remain the same hardware assumptions described in the main firmware guide. A controlled save pair remains an independent test of the field across device operation.
 
-## Remaining implementation and validation work
+## Export implementation and remaining validation
 
-1. Add a saved-tempo reader for the traced Song/All header. Check the code against the ROM UI range `00..69` (40–250 BPM), retain an explicit tempo override, and test invalid codes.
-2. Update CLI help, MIDI tempo metadata and documentation together, with regression tests confirming that explicit tempo overrides preserve their existing behavior.
+1. The BETA Song/All reader now validates code `00..69` at file offset `0036` and extracts 40–250 BPM. An explicit tempo override remains available. Invalid-code and boundary tests exercise both container types.
+2. CLI help, terminal output, inspection reports and MIDI metadata distinguish the saved tempo from an override. Regression tests cover both modes.
 3. Confirm the effective DMA mode and physical address interpretation against the hardware documentation and normal-bank transfer routines.
 4. Retain the reproduced listing locally and cross-reference the new helpers in the running function map. Raw `D0 B4` hits may include data and must be checked as instructions.
-5. When hardware is available, compare otherwise identical native saves at two tempos. Confirm the candidate code change and the resulting MIDI tempo before making extraction automatic.
+5. When hardware is available, compare otherwise identical native saves at two tempos for an independent device validation of the traced field and resulting MIDI tempo.
 
-The existing exporter continues to take the audition tempo explicitly. This checkpoint does not change the decoder's behavior.
+Song/All export uses the saved tempo by default. `--tempo-bpm` overrides it. Standalone Rhythm and pattern exports continue to take their audition tempo explicitly.
 
 ## Reproduce the bounded trace
 

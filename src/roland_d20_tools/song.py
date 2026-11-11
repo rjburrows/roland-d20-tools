@@ -2,8 +2,8 @@
 
 The event grammar follows C 1.11 ROM 6F6A-6FDB and 6FDC-70B0. The 192-position
 storage interval follows 6ED1; 5E06/5EAA support 96 positions per quarter.
-Stored rhythm-pattern hits can be expanded along the selection list. Saved
-tempo, ROM preset pattern notes, note-off policy, and routing remain unresolved.
+Stored rhythm-pattern hits can be expanded along the selection list. ROM
+preset pattern notes, note-off policy, and routing remain unresolved.
 """
 
 from __future__ import annotations
@@ -77,6 +77,16 @@ def _meter(raw: bytes) -> tuple[tuple[tuple[int, int], ...], int]:
     return tuple(changes), end
 
 
+def saved_tempo(raw: bytes) -> int:
+    """Read the C 1.11 header code loaded into B4D0, then convert to BPM."""
+    _kind(raw)
+    code = raw[0x36]
+    if code > 0x69:
+        raise D20Error(f"Invalid saved tempo code 0x{code:02X} at byte 0x36; "
+                       "use --tempo-bpm to supply an explicit override.")
+    return 40 + 2 * code
+
+
 def decode(raw: bytes) -> SongNotes:
     """Validate indexed FF boundaries and read only the ROM-confirmed 8x/9x records."""
     kind = _kind(raw)
@@ -129,15 +139,15 @@ def decode(raw: bytes) -> SongNotes:
     return SongNotes(kind, tuple(events), meter_changes, pattern_count)
 
 
-def convert(source: Path, destination: Path, *, tempo_bpm: int, force: bool,
+def convert(source: Path, destination: Path, *, tempo_bpm: int | None = None, force: bool,
             expected_kind: str | None = None, rhythm_track: bool = True,
             gate_ticks: int = 1) -> str:
     """Write a Type-1 MIDI with one track per stored status lane, never modifying input."""
     source, destination = source.expanduser(), destination.expanduser()
     if destination.suffix.lower() not in {".mid", ".midi"}:
         raise D20Error("BETA Song/All note export writes Standard MIDI .mid/.midi only.")
-    if not 4 <= tempo_bpm <= 300:
-        raise D20Error("--tempo-bpm must be between 4 and 300; the saved tempo is not decoded yet.")
+    if tempo_bpm is not None and not 4 <= tempo_bpm <= 300:
+        raise D20Error("--tempo-bpm must be between 4 and 300.")
     if not 1 <= gate_ticks <= 96:
         raise D20Error("--gate-ticks must be 1..96 (provisional rhythm note-off length).")
     require_new_output(source, destination, force)
@@ -145,11 +155,13 @@ def convert(source: Path, destination: Path, *, tempo_bpm: int, force: bool,
     parsed = decode(raw)
     if expected_kind and parsed.kind != expected_kind:
         raise D20Error(f"This is a native {parsed.kind} file; use the '{parsed.kind.lower()}' command.")
+    tempo_source = "saved" if tempo_bpm is None else "override"
+    effective_tempo = saved_tempo(raw) if tempo_bpm is None else tempo_bpm
     midi = mido.MidiFile(type=1, ticks_per_beat=POSITIONS_PER_QUARTER)
     conductor = mido.MidiTrack()
     conductor.append(mido.MetaMessage("track_name", name="D-20 Song notes BETA", time=0))
-    conductor.append(mido.MetaMessage("text", text="BETA: audition tempo supplied by user; rhythm gate and channel routing unresolved", time=0))
-    conductor.append(mido.MetaMessage("set_tempo", tempo=mido.bpm2tempo(tempo_bpm), time=0))
+    conductor.append(mido.MetaMessage("text", text=f"BETA: {tempo_source} tempo {effective_tempo} BPM; rhythm gate and channel routing unresolved", time=0))
+    conductor.append(mido.MetaMessage("set_tempo", tempo=mido.bpm2tempo(effective_tempo), time=0))
     previous = 0
     for position, numerator in parsed.meter_changes:
         conductor.append(mido.MetaMessage("time_signature", numerator=numerator, denominator=4, time=position - previous))
@@ -179,5 +191,5 @@ def convert(source: Path, destination: Path, *, tempo_bpm: int, force: bool,
     meters = f"{parsed.pattern_count} pattern selections" if parsed.pattern_count else "meter unavailable"
     return (f"BETA: exported {len(parsed.events)} note events from {parsed.kind} to {destination.name} "
             f"({len(lanes)} provisional lanes; 96 PPQ; {meters}; {rhythm_detail}; "
-            f"audition tempo {tempo_bpm} BPM). Saved tempo, ROM preset notes, "
+            f"{tempo_source} tempo {effective_tempo} BPM). ROM preset notes, "
             "rhythm gate, and track routing remain undecoded.")

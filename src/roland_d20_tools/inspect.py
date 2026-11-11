@@ -183,9 +183,13 @@ def report(path: Path) -> str:
             from . import song
             try:
                 notes = song.decode(raw)
-                detail = f"BETA {len(notes.events)} note events, stored lanes {notes.lanes}; saved tempo not decoded"
+                detail = f"BETA {len(notes.events)} note events, stored lanes {notes.lanes}"
             except D20Error:
-                detail = "BETA note decode unavailable; saved tempo not decoded"
+                detail = "BETA note decode unavailable"
+            try:
+                detail += f"; saved tempo {song.saved_tempo(raw)} BPM"
+            except D20Error as exc:
+                detail += f"; saved tempo unavailable ({exc})"
             lines.append(f"  Song event stream: {len(event_data):,} bytes; {sum(bool(value) for value in event_data):,} non-zero bytes ({detail})")
         if kind == "ALL":
             kind, detail = "ALL_DISK", _native_detail("ALL")
@@ -294,6 +298,10 @@ def _song_metadata(source: Path, native) -> list[tuple[str, str]]:
     except D20Error:
         note_details = "BETA note decode unavailable for this container"
         meter_details = "Pattern meter unverified"
+    try:
+        tempo_details = f"Saved tempo {song.saved_tempo(raw)} BPM; original track routing remains undecoded."
+    except D20Error as exc:
+        tempo_details = f"Saved tempo unavailable ({exc}); original track routing remains undecoded."
     rhythm_description = (
         f"{len(raw) - SONG_EMBEDDED_RHYTHM_OFFSET:,} bytes including the 256-byte Rhythm header; expanded to areas 09H, 0AH, 0BH, and 0CH"
         if native[0] == "SONG"
@@ -305,7 +313,7 @@ def _song_metadata(source: Path, native) -> list[tuple[str, str]]:
         ("Rhythm data", rhythm_description),
         ("BETA note events", note_details),
         ("BETA rhythm-chain meter", meter_details),
-        ("Tempo / track count", "Saved tempo and original track routing remain undecoded."),
+        ("Tempo / track count", tempo_details),
     ]
 
 
