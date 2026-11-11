@@ -1,5 +1,10 @@
 # Roland D-20 firmware reverse mapping
 
+The [destination and program trace](song-destinations-and-programs.md) follows
+both serial output queues through the board wiring and distinguishes the
+38-byte Patch loader from the 8-byte per-part Timbre loader. Initial saved
+program references and full CPU-link reception remain open.
+
 The [song-routing checkpoint](song-routing-checkpoint.md) adds the executed
 lane/channel mapper, its inverse, the two output queues, saved routing flags,
 program/CC handlers and sustain-state helper. Output mode and peripheral

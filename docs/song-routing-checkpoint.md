@@ -1,5 +1,10 @@
 # Song routing: executed C ROM checkpoint
 
+The later [destination and program trace](song-destinations-and-programs.md)
+resolves the two queue endpoints and identifies Patch/Timbre loaders. Endpoint
+uncertainties below describe this earlier checkpoint; runtime/save-state
+limitations remain.
+
 This records static instruction evidence from C 1.11, SHA-256
 `7c8d2aecbb74bf939661d3fd904c691a4c7c749a374cb804c0247b64b649e1c2`.
 Addresses are CPU addresses in normal `C8/18/18`. No exporter routing or
