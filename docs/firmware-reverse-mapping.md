@@ -1,5 +1,10 @@
 # Roland D-20 firmware reverse mapping
 
+The [saved initial-state trace](saved-initial-state.md) follows setup request
+`D8 59` to the `88/89` reply, six-byte header capture and load-time replay.
+Song/All MIDI and inspection now preserve the four confirmed setup values;
+initial part program references remain unverified.
+
 The [destination and program trace](song-destinations-and-programs.md) follows
 both serial output queues through the board wiring and distinguishes the
 38-byte Patch loader from the 8-byte per-part Timbre loader. Initial saved

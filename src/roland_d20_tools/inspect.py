@@ -302,6 +302,11 @@ def _song_metadata(source: Path, native) -> list[tuple[str, str]]:
         tempo_details = f"Saved tempo {song.saved_tempo(raw)} BPM; original track routing remains undecoded."
     except D20Error as exc:
         tempo_details = f"Saved tempo unavailable ({exc}); original track routing remains undecoded."
+    try:
+        setup = song.saved_setup(raw)
+        setup_details = setup.description if setup is not None else "Unavailable: no validated 88/89 header record pair"
+    except D20Error as exc:
+        setup_details = f"Unavailable ({exc})"
     rhythm_description = (
         f"{len(raw) - SONG_EMBEDDED_RHYTHM_OFFSET:,} bytes including the 256-byte Rhythm header; expanded to areas 09H, 0AH, 0BH, and 0CH"
         if native[0] == "SONG"
@@ -313,6 +318,7 @@ def _song_metadata(source: Path, native) -> list[tuple[str, str]]:
         ("Rhythm data", rhythm_description),
         ("BETA note events", note_details),
         ("BETA rhythm-chain meter", meter_details),
+        ("Saved sound setup", setup_details),
         ("Tempo / track count", tempo_details),
     ]
 

@@ -29,6 +29,8 @@ expand saved pattern selections into a separate rhythm MIDI track; `.444` can
 export one, all, or its saved selection track. SONG and ALL read their saved
 tempo by default. Factory preset notes can be read from an owned tone ROM
 using `--factory-rom`; see the Rhythm guide for the supported image.
+Recognized saved reverb and rhythm-level settings are retained as MIDI text
+and shown by inspection; initial instrument assignments remain unverified.
 
 ## Install
 
@@ -197,6 +199,8 @@ d20-tools --version
 `song` and `all` export discrete Song note events and expand the saved rhythm
 selection list into a separate drum MIDI track. They read the saved tempo
 from the file by default. Use `--tempo-bpm` to override it for audition.
+The [saved setup](docs/saved-initial-state.md) is preserved as native-value
+text metadata, without adding guessed program changes or GM controllers.
 The BETA output includes candidate meter changes and stored rhythm-pattern
 hits. Add `--factory-rom` for arrangements using factory presets. Original
 patches and channel routing remain unresolved. Export one stored pattern separately with `d20-tools pattern`.

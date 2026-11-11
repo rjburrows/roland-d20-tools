@@ -4,6 +4,11 @@
 
 ### Added
 
+- **BETA** saved reverb mode/time/level and rhythm level from the recognized
+  Song/All header setup pair. Inspection reports the native values; MIDI
+  export preserves them as text without inventing CC or program events.
+  Reproducible C/A/B traces document capture, source fields and load replay.
+
 - **BETA** factory rhythm preset extraction through `--factory-rom` on
   `pattern`, `rhythm --notes`, `song`, and `all`. A supported owned tone ROM
   supplies the 32 preset records. Rhythm all-pattern export includes 64

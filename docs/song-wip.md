@@ -29,6 +29,12 @@ gate remain unresolved. The rhythm notes use MIDI
 channel 10, while Song note lanes retain the stored status low nibble
 provisionally. Keep the original disk file; this is one-way.
 
+The recognized saved setup pair at header `0x16..0x1B` is preserved as MIDI
+text and shown by `inspect`: reverb mode, time, level and rhythm level in native
+units. These are not translated into GM controllers. Missing pairs do not
+invent defaults; non-seven-bit data in a recognized pair is rejected. Initial
+part programs remain unverified. See the [saved-state trace](saved-initial-state.md).
+
 The [routing trace](song-routing-checkpoint.md) confirms that firmware can
 conditionally adjust lane 7 and remap statuses through an active channel
 table, or select a queue that bypasses that table. The saved flags alone do

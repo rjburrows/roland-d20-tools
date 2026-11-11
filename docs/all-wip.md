@@ -1,5 +1,10 @@
 # All-file note export (BETA)
 
+The shared header's recognized saved reverb and rhythm-level record pair is
+included as MIDI text metadata and in inspection reports. This does not infer
+initial part programs from the embedded Sound library or translate settings
+to GM controllers. See the [saved-state trace](saved-initial-state.md).
+
 ```sh
 d20-tools all MYBACKUP.111 MYBACKUP-notes.mid
 d20-tools all MYBACKUP.111 audition.mid --tempo-bpm 120
