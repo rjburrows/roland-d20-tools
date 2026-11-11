@@ -31,6 +31,9 @@ tempo by default. Factory preset notes can be read from an owned tone ROM
 using `--factory-rom`; see the Rhythm guide for the supported image.
 Recorded program changes, including initial instrument selection at tick zero,
 retain their original D-20 references in SONG/ALL MIDI output.
+Recorded controllers (including sustain, modulation, volume and pan) and full
+14-bit pitch bend retain their values, timing and order; see the
+[BETA controller/bend guide](docs/song-controller-pitch.md).
 Recognized saved reverb and rhythm-level settings are retained as MIDI text
 and shown by inspection; unrecorded initial instrument defaults remain unverified.
 

@@ -1,4 +1,4 @@
-"""BETA, one-way note/program-event export from native D-20 Song and All files.
+"""BETA, one-way MIDI channel-event export from native D-20 Song and All files.
 
 The event grammar follows C 1.11 ROM 6F6A-6FDB and 6FDC-70B0. The 192-position
 storage interval follows 6ED1; 5E06/5EAA support 96 positions per quarter.
@@ -60,9 +60,34 @@ class ProgramEvent:
 
 
 @dataclass(frozen=True, slots=True)
+class ControllerEvent:
+    position: int
+    status: int
+    control: int
+    value: int
+    file_offset: int
+
+
+@dataclass(frozen=True, slots=True)
+class PitchBendEvent:
+    position: int
+    status: int
+    lsb: int
+    msb: int
+    file_offset: int
+
+    @property
+    def pitch(self) -> int:
+        return ((self.msb << 7) | self.lsb) - 8192
+
+
+SongEvent = NoteEvent | ProgramEvent | ControllerEvent | PitchBendEvent
+
+
+@dataclass(frozen=True, slots=True)
 class SongNotes:
     kind: str
-    events: tuple[NoteEvent | ProgramEvent, ...]
+    events: tuple[SongEvent, ...]
     meter_changes: tuple[tuple[int, int], ...]  # absolute position, numerator / 4
     pattern_count: int
 
@@ -76,7 +101,15 @@ class SongNotes:
 
     @property
     def program_count(self) -> int:
-        return len(self.events) - self.note_count
+        return sum(isinstance(event, ProgramEvent) for event in self.events)
+
+    @property
+    def controller_count(self) -> int:
+        return sum(isinstance(event, ControllerEvent) for event in self.events)
+
+    @property
+    def pitch_bend_count(self) -> int:
+        return sum(isinstance(event, PitchBendEvent) for event in self.events)
 
 
 def _kind(raw: bytes) -> str:
@@ -135,7 +168,7 @@ def saved_setup(raw: bytes) -> SavedSetup | None:
 
 
 def decode(raw: bytes) -> SongNotes:
-    """Read ROM-confirmed 8x/9x notes and one-data-byte Cx program records."""
+    """Read validated notes, programs, controllers and pitch-bend records."""
     kind = _kind(raw)
     base = int.from_bytes(raw[0x41:0x44], "little")
     if not base:
@@ -170,21 +203,26 @@ def decode(raw: bytes) -> SongNotes:
             if raw[offset] & 0x80:
                 status = raw[offset]
                 offset += 1
-            if status is None or status & 0xF0 not in (0x80, 0x90, 0xC0):
+            if status is None or status & 0xF0 not in (0x80, 0x90, 0xB0, 0xC0, 0xE0):
                 raise D20Error(f"Unsupported BETA Song status at file byte 0x{at:04X}.")
-            size = 2 if status & 0xF0 == 0x90 else 1
+            family = status & 0xF0
+            size = 1 if family in (0x80, 0xC0) else 2
             if offset + size > boundary or any(value > 0x7F for value in raw[offset:offset + size]):
                 raise D20Error(f"Invalid Song event data at file byte 0x{at:04X}.")
             absolute = interval * INTERVAL_POSITIONS + position
-            if status & 0xF0 == 0xC0:
+            if family == 0xC0:
                 events.append(ProgramEvent(absolute, status, raw[offset], at))
+            elif family == 0xB0:
+                events.append(ControllerEvent(absolute, status, raw[offset], raw[offset + 1], at))
+            elif family == 0xE0:
+                events.append(PitchBendEvent(absolute, status, raw[offset], raw[offset + 1], at))
             else:
                 velocity = raw[offset + 1] if size == 2 else 0
                 events.append(NoteEvent(absolute, status, raw[offset], velocity, at))
             offset += size
         start = boundary + 1
     if not events:
-        raise D20Error("No supported Song note or program events were found.")
+        raise D20Error("No supported Song events were found.")
     meter_changes, pattern_count = _meter(raw)
     return SongNotes(kind, tuple(events), meter_changes, pattern_count)
 
@@ -223,7 +261,7 @@ def convert(source: Path, destination: Path, *, tempo_bpm: int | None = None, fo
         conductor.append(mido.MetaMessage("time_signature", numerator=numerator, denominator=4, time=position - previous))
         previous = position
     midi.tracks.append(conductor)
-    lanes: dict[int, list[NoteEvent | ProgramEvent]] = {}
+    lanes: dict[int, list[SongEvent]] = {}
     for event in parsed.events:
         lanes.setdefault(event.status & 0x0F, []).append(event)
     for lane, events in sorted(lanes.items()):
@@ -236,6 +274,12 @@ def convert(source: Path, destination: Path, *, tempo_bpm: int | None = None, fo
         for event in events:
             if isinstance(event, ProgramEvent):
                 message = mido.Message("program_change", channel=lane, program=event.program,
+                                       time=event.position - previous)
+            elif isinstance(event, ControllerEvent):
+                message = mido.Message("control_change", channel=lane, control=event.control,
+                                       value=event.value, time=event.position - previous)
+            elif isinstance(event, PitchBendEvent):
+                message = mido.Message("pitchwheel", channel=lane, pitch=event.pitch,
                                        time=event.position - previous)
             else:
                 # ROM 6FCF converts stored 8x off to 9x velocity zero.
@@ -254,6 +298,7 @@ def convert(source: Path, destination: Path, *, tempo_bpm: int | None = None, fo
     atomic_write(destination, buffer.getvalue())
     meters = f"{parsed.pattern_count} pattern selections" if parsed.pattern_count else "meter unavailable"
     return (f"BETA: exported {parsed.note_count} note events and {parsed.program_count} program changes "
+            f"with {parsed.controller_count} controller events and {parsed.pitch_bend_count} pitch bends "
             f"from {parsed.kind} to {destination.name} "
             f"({len(lanes)} provisional lanes; 96 PPQ; {meters}; {rhythm_detail}; "
             f"{tempo_source} tempo {effective_tempo} BPM). "

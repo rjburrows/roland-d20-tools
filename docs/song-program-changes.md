@@ -49,7 +49,9 @@ same-tick order, repeats, status transitions, offsets and program-only lanes.
 An exhaustive fixture exports all 128 numbers on all 16 lane nibbles; this
 tests preservation, not validity as an internal D-20 part in every mode.
 Malformed payloads and missing status after `FF` stop before output.
-Controllers, pitch bend, pressure and internal commands remain unsupported.
+Recorded controllers and pitch bend are now supported; see the
+[controller/bend guide](song-controller-pitch.md). Pressure and internal
+commands remain unsupported.
 
 `make check` passed: 78 tests, 8 optional skips; Song/pattern statement and
 branch coverage 100%, repository 94%. The private Song/All pair contains

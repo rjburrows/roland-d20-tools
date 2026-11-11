@@ -20,7 +20,9 @@ following the embedded Song pattern list. It does not require a separate
 Recorded `Cx` programs retain their original numbers, ticks and order. The
 embedded Sound library can supply referenced instruments, but the exporter
 does not assume Patch/Timbre mode or convert references to GM sounds.
-See the [program-change guide](song-program-changes.md).
+See the [program-change guide](song-program-changes.md). Recorded controllers
+and full 14-bit pitch bend are included with the same order and timing policy;
+see the [controller/bend guide](song-controller-pitch.md).
 
 The saved tempo at header offset `0x36` is used by default, with the same
 validated code range and ROM formula as Song export. `--tempo-bpm 4..300`

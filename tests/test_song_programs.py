@@ -101,8 +101,8 @@ class SongProgramTests(unittest.TestCase):
                  ([bytes.fromhex("00 C0 80 FF")], "Invalid Song event data"),
                  ([bytes.fromhex("00 C0 7F FF"), bytes.fromhex("00 04 FF")], "Unsupported BETA"),
                  ([bytes.fromhex("00 D0 01 FF")], "Unsupported BETA"),
-                 ([bytes.fromhex("00 B0 07 64 FF")], "Unsupported BETA"),
-                 ([bytes.fromhex("00 E0 00 40 FF")], "Unsupported BETA")]
+                 ([bytes.fromhex("00 B0 07 FF")], "Invalid Song event data"),
+                 ([bytes.fromhex("00 E0 00 FF")], "Invalid Song event data")]
         with tempfile.TemporaryDirectory() as directory:
             source, target = Path(directory) / "song.222", Path(directory) / "song.mid"
             for intervals, message in cases:

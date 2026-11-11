@@ -1,5 +1,9 @@
 # Roland D-20 firmware reverse mapping
 
+The [controller and pitch-bend checkpoint](song-controller-pitch.md) adds
+ROM-backed `Bx`/`Ex` extraction and the atomic record-state/headroom helpers
+`68DD`, `6924` and `6945`, with dependencies and unresolved branches.
+
 The [program-change guide](song-program-changes.md) records matching reader,
 recorder and output evidence for one-data-byte `Cx` records. Song/All export
 now preserves those recorded references alongside notes. Initial programs are
@@ -188,7 +192,7 @@ File ranges in this section use an exclusive end. These alignments describe the 
 | Song chain and lengths | `.222` / `.111` `0044:023B` terminated by `FF`, length table `023B:027B` | Correlates with `B4DE/B4E0` and `B6D5`. IDs `3E` and `3F` map to `P-87` and `P-88`. Compare the saved length against each selected record header. Empty slots still advance time. |
 | Song header candidates | `.222` / `.111` `0036`, `003F`, `0041:0044` | Proposed base `B49A + file offset` aligns tempo with `B4D0`, active-lane mask with `B4D9`, and the 24-bit event base with `B4DB`. ROM formula `40 + 2 × B4D0` gives tempo in BPM. The first-allocation reader, header copy, DMA, and completion callback establish the tempo-byte path. Other header interpretations still require independent traces. |
 | Song index and events | `.222` / `.111` index `0283:1A00`, event region `1A00:3A02` | Candidate RAM index base `B71D`. Subtract the header's 24-bit base from each little-endian pointer and add file offset `1A00`. Pointer targets are separate `FF` markers. Index entries increase strictly. A full index can run to its region limit. |
-| Song record | `[position, optional status, first data, optional second data]` | Each `FF` clears running status. Position is `0..191` in a 192-position storage interval. Export accepts `8x`/`9x` notes and `Cx` programs. Program data has one byte; status low nibble determines the provisional MIDI channel. |
+| Song record | `[position, optional status, first data, optional second data]` | Each `FF` clears running status. Position is `0..191` in a 192-position storage interval. Export accepts `8x`/`9x` notes, `Bx` controllers, `Cx` programs and `Ex` pitch bend. Programs and stored `8x` have one data byte; other supported families have two; status low nibble determines the provisional MIDI channel. |
 
 The normal-bank MMU relationship `B43C → 02343C` also makes the disk-load DMA address `0234BA` consistent with RAM `B4BA` and proposed Song offset `0020`. This supports the `B49A` alignment. The executed [tempo-load trace](song-tempo-load-checkpoint.md) follows the first allocation to `9A00`, the header copy and DMA transfer, and the completion call through vector `0014` to `41BE`. The byte at offset `0036` lands at physical `0234D0` and is read as `B4D0` for timer reapplication.
 
