@@ -29,6 +29,12 @@ gate remain unresolved. The rhythm notes use MIDI
 channel 10, while Song note lanes retain the stored status low nibble
 provisionally. Keep the original disk file; this is one-way.
 
+The [routing trace](song-routing-checkpoint.md) confirms that firmware can
+conditionally adjust lane 7 and remap statuses through an active channel
+table, or select a queue that bypasses that table. The saved flags alone do
+not establish every runtime mode. Initial programs, volume and pan are not
+invented or emitted from unverified header fields.
+
 Pattern IDs `0x00`–`0x1F` refer to factory presets in the tone ROM. Supply
 `--factory-rom TONE_ROM.BIN` to expand them alongside the writable patterns.
 The supported 128 KiB image is checked by SHA-256, as documented in the

@@ -1,5 +1,10 @@
 # Roland D-20 firmware reverse mapping
 
+The [song-routing checkpoint](song-routing-checkpoint.md) adds the executed
+lane/channel mapper, its inverse, the two output queues, saved routing flags,
+program/CC handlers and sustain-state helper. Output mode and peripheral
+endpoints remain unresolved; the exporter still uses provisional lane channels.
+
 This is the address and reproduction guide for the D-20 sequencer, rhythm editor, and floppy traces. The investigation used Ghidra 12.2 and owned ROM dumps. Addresses are hexadecimal unless stated otherwise. **Confirmed** means an instruction or table was observed in the identified ROM and bank view. **Correlated** means bytes in saved containers agree with the ROM layout. **Provisional** means the BETA exporter makes a choice that hardware playback has yet to establish.
 
 ## Set up the ROM views
