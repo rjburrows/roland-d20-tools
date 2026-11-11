@@ -8,6 +8,9 @@ d20-tools song MYSONG.222 audition.mid --tempo-bpm 120
 This one-way export reads the native Song container and writes a Type-1 Standard
 MIDI file with a conductor track, one track per observed stored-status lane,
 and a separate expanded rhythm track by default.
+Recorded `Cx` program changes are preserved too, including tick-zero instrument
+selection. Numbers remain D-20 references, without a GM sound translation.
+See the [program-change evidence and limits](song-program-changes.md).
 The note events and relative timing follow the C 1.11 control ROM reader at
 `0x6F6A–0x6FDB`, the 192-position storage interval at `0x6ED1`, and the
 96-position-per-quarter duration table at `0x5EAA`. Stored one-data-byte `8x`
@@ -24,8 +27,8 @@ pattern IDs and 1–8 beat lengths in the header produce time-signature changes.
 The rhythm track follows the same pattern-ID list, expanding the note triples
 of each stored pattern at its recorded position; silent patterns retain their
 duration. `--gate-ticks 1..96` sets a provisional note-off length (default one
-tick). Original channel routing and patches, the exact device
-gate remain unresolved. The rhythm notes use MIDI
+tick). Automatic Patch/Timbre mode resolution, original channel routing and
+the exact device gate remain unresolved. The rhythm notes use MIDI
 channel 10, while Song note lanes retain the stored status low nibble
 provisionally. Keep the original disk file; this is one-way.
 
@@ -33,7 +36,8 @@ The recognized saved setup pair at header `0x16..0x1B` is preserved as MIDI
 text and shown by `inspect`: reverb mode, time, level and rhythm level in native
 units. These are not translated into GM controllers. Missing pairs do not
 invent defaults; non-seven-bit data in a recognized pair is rejected. Initial
-part programs remain unverified. See the [saved-state trace](saved-initial-state.md).
+part defaults not recorded as program events remain unverified. See the
+[saved-state trace](saved-initial-state.md).
 
 The [routing trace](song-routing-checkpoint.md) confirms that firmware can
 conditionally adjust lane 7 and remap statuses through an active channel
@@ -52,7 +56,7 @@ the rhythm expansion. Tempo belongs to the Song header and applies to the
 whole export. Individual rhythm patterns carry their own lengths and hits.
 
 The event index must point to separate `FF` boundary bytes and each parsed
-record must have a supported `8x` or `9x` note status. Unsupported or malformed
+record must have a supported `8x`/`9x` note or `Cx` program status. Unsupported or malformed
 records cause a clear error before any output is written. The BETA grammar was
 validated against a paired Song/All disk capture and the C 1.11 ROM, but other
 firmware versions and compositions may contain event types this exporter does

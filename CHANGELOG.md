@@ -4,6 +4,12 @@
 
 ### Added
 
+- **BETA** recorded program changes in Song/All MIDI: preserve zero-based
+  D-20 numbers, tick-zero and later selections, repeats and within-lane order.
+  Program-only lanes are retained; matching stored instruments are required.
+  Reader/recorder evidence, generated fixtures and native-note regressions
+  accompany the feature. No GM instrument remapping or default programs.
+
 - **BETA** saved reverb mode/time/level and rhythm level from the recognized
   Song/All header setup pair. Inspection reports the native values; MIDI
   export preserves them as text without inventing CC or program events.
