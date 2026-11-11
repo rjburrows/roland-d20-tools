@@ -1,4 +1,4 @@
-"""BETA single-pattern MIDI extraction from native D-20 Rhythm/Song/All files.
+"""BETA rhythm-pattern MIDI extraction from native D-20 Rhythm/Song/All files.
 
 The A/B 1.12 MCS-96 editor at 1A6D and 1910 confirms the 294-byte record:
 meter-minus-one, event count, reserved zero, then [position, note, velocity].
@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 import io
+import hashlib
 from pathlib import Path
 
 import mido
@@ -21,6 +22,9 @@ PATTERN_COUNT = 32
 TICKS_PER_QUARTER = 96
 RAW_POSITIONS_PER_QUARTER = 24
 SETUP_SIZE = 340
+FACTORY_ROM_SIZE = 131_072
+FACTORY_ROM_SHA256 = "ae4aa5a80b5e5aba9584db6906707ea9d74fb04936a917e6e62585a4529782a1"
+FACTORY_TABLE = 0x3000
 CONTAINERS = {
     12_288: ("RHYTHM", 0x0100),
     27_648: ("SONG", 0x3B00),
@@ -33,7 +37,7 @@ class Hit:
     position: int  # stored units, 24 per quarter note
     note: int
     velocity: int
-    file_offset: int
+    file_offset: int  # byte offset in the native record source or factory tone ROM
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,10 +54,20 @@ def valid_header(meter: int, count: int, reserved: int) -> bool:
     return meter <= 7 and count <= 96 and reserved == 0
 
 
-def decode(raw: bytes, pattern_id: int) -> Pattern:
-    """Read one writable pattern ID 20..3F, without assuming a chain or gate."""
-    if not 0x20 <= pattern_id <= 0x3F:
-        raise D20Error("BETA pattern export supports stored IDs 0x20..0x3F (P-51..P-88).")
+def read_factory_rom(path: Path | None) -> bytes | None:
+    """Read an owned tone ROM for the optional preset-pattern expansion."""
+    if path is None:
+        return None
+    rom = read_file(path.expanduser())
+    if len(rom) != FACTORY_ROM_SIZE or hashlib.sha256(rom).hexdigest() != FACTORY_ROM_SHA256:
+        raise D20Error("Expected the supported 128 KiB D-20 tone ROM; factory ROM size or SHA256 differs.")
+    return rom
+
+
+def decode(raw: bytes, pattern_id: int, *, factory_rom: bytes | None = None) -> Pattern:
+    """Read one pattern; preset IDs 00..1F require the supplied tone-ROM bytes."""
+    if not 0 <= pattern_id <= 0x3F:
+        raise D20Error("BETA pattern export supports IDs 0x00..0x3F (P-11..P-88).")
     container = CONTAINERS.get(len(raw))
     if container is None:
         raise D20Error("Expected a native .444 Rhythm, .222 Song, or .111 All file.")
@@ -66,8 +80,20 @@ def decode(raw: bytes, pattern_id: int) -> Pattern:
     if raw[base + 0x2900:base + 0x2F00] != raw[base + 0x1D00:base + 0x2300]:
         raise D20Error("Rhythm mirror does not match the source pattern data.")
 
-    start = base + (pattern_id - 0x20) * PATTERN_SIZE
-    record = raw[start:start + PATTERN_SIZE]
+    if pattern_id < 0x20:
+        if factory_rom is None:
+            raise D20Error("ROM preset patterns require --factory-rom with the owned D-20 tone ROM.")
+        start = int.from_bytes(factory_rom[FACTORY_TABLE + 2 * pattern_id:FACTORY_TABLE + 2 * pattern_id + 2], "little")
+        if not FACTORY_TABLE + 64 <= start <= len(factory_rom) - 6:
+            raise D20Error(f"Invalid factory pattern pointer for ID 0x{pattern_id:02X}.")
+        count = factory_rom[start + 1]
+        end = start + 6 + 3 * count
+        if count > 96 or end > len(factory_rom):
+            raise D20Error(f"Invalid factory pattern record bounds for ID 0x{pattern_id:02X}.")
+        record = factory_rom[start:end]
+    else:
+        start = base + (pattern_id - 0x20) * PATTERN_SIZE
+        record = raw[start:start + PATTERN_SIZE]
     meter, count, reserved = record[:3]
     if not valid_header(meter, count, reserved):
         raise D20Error(f"Invalid pattern header at byte 0x{start:X}.")
@@ -81,7 +107,7 @@ def decode(raw: bytes, pattern_id: int) -> Pattern:
         hits.append(Hit(position, note, velocity, start + 3 + i * 3))
         previous = position
     pad = record[3 + count * 3:]
-    # The fixed 294-byte record and count limit leave at least one complete triple.
+    # Each source supplies a complete record with at least one terminator triple.
     if any(pad[i:i + 3] not in (b"\xff\x80\x00", b"\xff\x00\x00") for i in range(0, len(pad), 3)):
         raise D20Error(f"Invalid pattern terminator/padding at byte 0x{start + 3 + count * 3:X}.")
 
@@ -91,8 +117,8 @@ def decode(raw: bytes, pattern_id: int) -> Pattern:
     return Pattern(kind, pattern_id, beats, tuple(hits), used)
 
 
-def rhythm_chain(raw: bytes) -> tuple[int, ...]:
-    """Read a native pattern-number list; reject preset IDs not yet decoded."""
+def rhythm_chain(raw: bytes, *, factory_rom: bytes | None = None) -> tuple[int, ...]:
+    """Read a native pattern-number list; presets require supplied ROM data."""
     kind = CONTAINERS.get(len(raw))
     if kind is None:
         raise D20Error("A rhythm track requires a native .444, .222, or .111 file.")
@@ -108,9 +134,11 @@ def rhythm_chain(raw: bytes) -> tuple[int, ...]:
             raise D20Error("Song rhythm track has no validated FF terminator.")
         ids = tuple(chain[:end])
     for index, pattern_id in enumerate(ids):
-        if not 0x20 <= pattern_id <= 0x3F:
-            raise D20Error(f"Rhythm selection {index + 1} uses pattern ID 0x{pattern_id:02X}; "
-                           "ROM preset patterns are not decoded. Use --no-rhythm-track for Song notes only.")
+        if pattern_id > 0x3F:
+            raise D20Error(f"Invalid rhythm selection {index + 1}: pattern ID 0x{pattern_id:02X}.")
+        if pattern_id < 0x20 and factory_rom is None:
+            raise D20Error(f"Rhythm selection {index + 1} uses ROM preset ID 0x{pattern_id:02X}. "
+                           "Provide --factory-rom or use --no-rhythm-track for Song notes only.")
     return ids
 
 
@@ -120,7 +148,9 @@ def append_hits(track: mido.MidiTrack, selections: tuple[tuple[int, Pattern], ..
     events = []
     used: dict[int, bytes] = {}
     hit_count = 0
+    duration = 0
     for selection, (start, parsed) in enumerate(selections):
+        duration = max(duration, start + parsed.beats * TICKS_PER_QUARTER)
         if markers:
             events.append((start, -1, selection, mido.MetaMessage(
                 "marker", text=f"P-{(parsed.pattern_id >> 3 & 7) + 1}{(parsed.pattern_id & 7) + 1} "
@@ -140,13 +170,15 @@ def append_hits(track: mido.MidiTrack, selections: tuple[tuple[int, Pattern], ..
     for tick, _, _, message in sorted(events):
         track.append(message.copy(time=tick - previous))
         previous = tick
+    track.append(mido.MetaMessage("end_of_track", time=max(duration, previous) - previous))
     return hit_count
 
 
-def expanded_rhythm_track(raw: bytes, *, gate_ticks: int, channel: int = 9) -> tuple[mido.MidiTrack, int, int]:
+def expanded_rhythm_track(raw: bytes, *, gate_ticks: int, channel: int = 9,
+                          factory_rom: bytes | None = None) -> tuple[mido.MidiTrack, int, int]:
     """Assemble the saved selection list, preserving rests from empty patterns."""
-    ids = rhythm_chain(raw)
-    cache = {number: decode(raw, number) for number in set(ids)}
+    ids = rhythm_chain(raw, factory_rom=factory_rom)
+    cache = {number: decode(raw, number, factory_rom=factory_rom) for number in set(ids)}
     if len(raw) != 12_288:
         lengths = raw[0x23B:0x27B]
         for number, parsed in cache.items():
@@ -159,14 +191,15 @@ def expanded_rhythm_track(raw: bytes, *, gate_ticks: int, channel: int = 9) -> t
         selections.append((start, parsed))
         start += parsed.beats * TICKS_PER_QUARTER
     track = mido.MidiTrack()
-    track.append(mido.MetaMessage("track_name", name="Rhythm track (BETA stored patterns)", time=0))
+    track.append(mido.MetaMessage("track_name", name="Rhythm track (BETA)", time=0))
     track.append(mido.MetaMessage("text", text="BETA: note-off gate and position scale provisional; tempo supplied for audition", time=0))
     hits = append_hits(track, tuple(selections), gate_ticks=gate_ticks, channel=channel, markers=True)
     return track, len(ids), hits
 
 
 def convert_rhythm(source: Path, destination: Path, *, mode: str, pattern_id: int | None,
-                   tempo_bpm: int, gate_ticks: int = 1, channel: int = 9, force: bool = False) -> str:
+                   tempo_bpm: int, gate_ticks: int = 1, channel: int = 9, force: bool = False,
+                   factory_rom: Path | None = None) -> str:
     """Export one, all, or the arranged stored patterns from a .444 file."""
     source, destination = source.expanduser(), destination.expanduser()
     if source.suffix.lower() != ".444" or destination.suffix.lower() not in {".mid", ".midi"}:
@@ -180,7 +213,10 @@ def convert_rhythm(source: Path, destination: Path, *, mode: str, pattern_id: in
     if mode not in {"pattern", "all", "track"}:
         raise D20Error("--notes must be pattern, all, or track.")
     require_new_output(source, destination, force)
+    if factory_rom is not None:
+        require_new_output(factory_rom, destination, force)
     raw = read_file(source)
+    factory = read_factory_rom(factory_rom)
     midi = mido.MidiFile(type=1, ticks_per_beat=TICKS_PER_QUARTER)
     conductor = mido.MidiTrack()
     conductor.append(mido.MetaMessage("track_name", name="D-20 Rhythm BETA", time=0))
@@ -188,10 +224,10 @@ def convert_rhythm(source: Path, destination: Path, *, mode: str, pattern_id: in
     conductor.append(mido.MetaMessage("set_tempo", tempo=mido.bpm2tempo(tempo_bpm), time=0))
     midi.tracks.append(conductor)
     if mode == "track":
-        track, selections, hits = expanded_rhythm_track(raw, gate_ticks=gate_ticks, channel=channel)
+        track, selections, hits = expanded_rhythm_track(raw, gate_ticks=gate_ticks, channel=channel, factory_rom=factory)
         position, previous, numerator = 0, 0, None
-        for number in rhythm_chain(raw):
-            beats = decode(raw, number).beats
+        for number in rhythm_chain(raw, factory_rom=factory):
+            beats = decode(raw, number, factory_rom=factory).beats
             if beats != numerator:
                 conductor.append(mido.MetaMessage("time_signature", numerator=beats, denominator=4,
                                                    time=position - previous))
@@ -200,8 +236,8 @@ def convert_rhythm(source: Path, destination: Path, *, mode: str, pattern_id: in
         midi.tracks.append(track)
         description = f"{selections} saved selections, {hits} hits"
     else:
-        ids = range(0x20, 0x40) if mode == "all" else (pattern_id,)
-        patterns = [decode(raw, number) for number in ids]
+        ids = range(0 if factory is not None else 0x20, 0x40) if mode == "all" else (pattern_id,)
+        patterns = [decode(raw, number, factory_rom=factory) for number in ids]
         if mode == "pattern":
             conductor.append(mido.MetaMessage("time_signature", numerator=patterns[0].beats, denominator=4, time=0))
         hits = 0
@@ -212,7 +248,7 @@ def convert_rhythm(source: Path, destination: Path, *, mode: str, pattern_id: in
                          f"{parsed.beats} beats, BETA)", time=0))
             hits += append_hits(track, ((0, parsed),), gate_ticks=gate_ticks, channel=channel)
             midi.tracks.append(track)
-        description = f"{len(patterns)} stored patterns, {hits} hits"
+        description = f"{len(patterns)} patterns, {hits} hits"
     buffer = io.BytesIO()
     midi.save(file=buffer)
     atomic_write(destination, buffer.getvalue())
@@ -220,7 +256,8 @@ def convert_rhythm(source: Path, destination: Path, *, mode: str, pattern_id: in
 
 
 def convert(source: Path, destination: Path, *, pattern_id: int, tempo_bpm: int,
-            gate_ticks: int = 1, channel: int = 9, force: bool = False) -> str:
+            gate_ticks: int = 1, channel: int = 9, force: bool = False,
+            factory_rom: Path | None = None) -> str:
     """Export a Type-1 MIDI with a single selected drum pattern, preserving input."""
     source, destination = source.expanduser(), destination.expanduser()
     if destination.suffix.lower() not in {".mid", ".midi"}:
@@ -232,7 +269,9 @@ def convert(source: Path, destination: Path, *, pattern_id: int, tempo_bpm: int,
     if not 0 <= channel <= 15:
         raise D20Error("--channel must be 0..15 (zero-based MIDI channel).")
     require_new_output(source, destination, force)
-    parsed = decode(read_file(source), pattern_id)
+    if factory_rom is not None:
+        require_new_output(factory_rom, destination, force)
+    parsed = decode(read_file(source), pattern_id, factory_rom=read_factory_rom(factory_rom))
     midi = mido.MidiFile(type=1, ticks_per_beat=TICKS_PER_QUARTER)
     conductor = mido.MidiTrack()
     conductor.append(mido.MetaMessage("track_name", name=f"D-20 P-{(pattern_id >> 3 & 7) + 1}{(pattern_id & 7) + 1} BETA", time=0))
@@ -242,17 +281,7 @@ def convert(source: Path, destination: Path, *, pattern_id: int, tempo_bpm: int,
     midi.tracks.append(conductor)
     track = mido.MidiTrack()
     track.append(mido.MetaMessage("track_name", name=f"Rhythm pattern 0x{pattern_id:02X} (BETA)", time=0))
-    for note, settings in parsed.setup:
-        track.append(mido.MetaMessage("text", text=f"D-20 rhythm setup note {note}: raw 09H {settings.hex().upper()} (device settings, unmapped)", time=0))
-    events = []
-    for order, hit in enumerate(parsed.hits):
-        tick = hit.position * (TICKS_PER_QUARTER // RAW_POSITIONS_PER_QUARTER)
-        events.append((tick, 1, order, mido.Message("note_on", channel=channel, note=hit.note, velocity=hit.velocity)))
-        events.append((tick + gate_ticks, 0, order, mido.Message("note_off", channel=channel, note=hit.note, velocity=0)))
-    previous = 0
-    for tick, _, _, message in sorted(events):
-        track.append(message.copy(time=tick - previous))
-        previous = tick
+    append_hits(track, ((0, parsed),), gate_ticks=gate_ticks, channel=channel)
     midi.tracks.append(track)
     buffer = io.BytesIO()
     midi.save(file=buffer)

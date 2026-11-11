@@ -18,6 +18,6 @@ def report() -> str:
         f"Mido: {version('mido')}",
         "Supported input: .mid, .midi, .syx, .333, .444, .111, .222",
         "Ready commands: inspect, find, report, sound, rhythm; experimental: d110",
-        "BETA note export: song, all, pattern, rhythm --notes (Song/All saved tempo supported; ROM preset notes undecoded)",
+        "BETA note export: song, all, pattern, rhythm --notes (Song/All saved tempo supported; factory presets require --factory-rom)",
         "Live MIDI input/output: not included",
     ))

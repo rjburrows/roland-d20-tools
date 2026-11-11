@@ -114,6 +114,7 @@ class PatternBetaTests(unittest.TestCase):
             for command, options, message in (
                 ("rhythm", ["--notes", "all"], "--tempo-bpm is required"),
                 ("rhythm", ["--tempo-bpm", "120"], "Rhythm note options require"),
+                ("rhythm", ["--factory-rom", "owned.bin"], "Rhythm note options require"),
                 ("rhythm", ["--notes", "pattern", "--tempo-bpm", "120"], "--pattern-id is required"),
                 ("rhythm", ["--notes", "all", "--tempo-bpm", "120", "--pattern-id", "0x3f"], "--pattern-id is required only"),
                 ("rhythm", ["--notes", "track", "--tempo-bpm", "301"], "--tempo-bpm"),
@@ -172,8 +173,10 @@ class PatternBetaTests(unittest.TestCase):
             damaged[offset] = replacement
             with self.subTest(offset=offset), self.assertRaisesRegex(D20Error, reason):
                 pattern.decode(damaged, 0x3F)
-        with self.assertRaisesRegex(D20Error, "0x20..0x3F"):
+        with self.assertRaisesRegex(D20Error, "--factory-rom"):
             pattern.decode(raw, 0x1F)
+        with self.assertRaisesRegex(D20Error, "0x00..0x3F"):
+            pattern.decode(raw, 0x40)
         with self.assertRaisesRegex(D20Error, "Expected a native"):
             pattern.decode(raw[:-1], 0x3F)
         raw = bytearray(fixture("ALL"))

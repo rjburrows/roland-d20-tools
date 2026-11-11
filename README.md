@@ -27,7 +27,8 @@ and All (`.111`) containers by their contents. BETA Song/All note export and
 individual stored rhythm-pattern note export are available. SONG and ALL now
 expand saved pattern selections into a separate rhythm MIDI track; `.444` can
 export one, all, or its saved selection track. SONG and ALL read their saved
-tempo by default. ROM preset pattern notes are still under research.
+tempo by default. Factory preset notes can be read from an owned tone ROM
+using `--factory-rom`; see the Rhythm guide for the supported image.
 
 ## Install
 
@@ -82,7 +83,7 @@ replace the destination.
 | `d20-tools doctor` | Ready — installed-version and capability summary | [Doctor](docs/doctor.md) |
 | `d20-tools sound` | Ready | [Sound converter](docs/sound-converter.md) |
 | `d20-tools rhythm` | Ready for SysEx; **BETA** for pattern/track note MIDI | [Rhythm converter](docs/rhythm-converter.md) |
-| `d20-tools pattern` | **BETA** — one stored pattern's note events from `.444`, `.222`, or `.111` | [Pattern note export](docs/rhythm-converter.md#one-stored-pattern-as-notes-beta) |
+| `d20-tools pattern` | **BETA** — one pattern's note events, with `--factory-rom` for presets | [Pattern note export](docs/rhythm-converter.md#one-stored-pattern-as-notes-beta) |
 | `d20-tools d110` | **Experimental** — one-way D-20 to D-110 conversion; verify the report before use | [D-110 experimental converter](docs/d110-experimental.md) |
 | `d20-tools song` | **BETA** — one-way native Song note export | [Song note export](docs/song-wip.md) |
 | `d20-tools all` | **BETA** — one-way native All note export | [All-file note export](docs/all-wip.md) |
@@ -113,6 +114,8 @@ the [memory-address reference](docs/memory-map.md) for the source-derived D-20
 address and native-file layout tables.
 The [firmware reverse-mapping guide](docs/firmware-reverse-mapping.md) records
 the Ghidra workflow, ROM function addresses, and evidence behind the MIDI export.
+The [factory pattern guide](docs/factory-rhythm-rom-mapping.md) covers preset
+selection, tone-ROM pointers, and reproduction of the factory note extraction.
 
 ## How to choose a command
 
@@ -195,8 +198,8 @@ d20-tools --version
 selection list into a separate drum MIDI track. They read the saved tempo
 from the file by default. Use `--tempo-bpm` to override it for audition.
 The BETA output includes candidate meter changes and stored rhythm-pattern
-hits, but not ROM preset pattern notes, patches, or proven original channel
-routing. Export one stored pattern separately with `d20-tools pattern`.
+hits. Add `--factory-rom` for arrangements using factory presets. Original
+patches and channel routing remain unresolved. Export one stored pattern separately with `d20-tools pattern`.
 Source files are never modified. See the [Song](docs/song-wip.md), [All](docs/all-wip.md), and
 [pattern](docs/rhythm-converter.md#one-stored-pattern-as-notes-beta) guides.
 

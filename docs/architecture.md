@@ -35,8 +35,10 @@ kept separate because D-110 hardware round-trip validation is still pending.
 provisional note lanes. `pattern.py` validates stored pattern hit triples and
 expands the saved selection list to an additional rhythm MIDI track for Song,
 All, or Rhythm note export. Song/All tempo comes from the saved header or an
-explicit override. ROM preset note records and
-hardware note-off policy remain outside these BETA decoders.
+explicit override. An optional, hash-checked tone ROM supplies factory
+pattern records through the shared pattern decoder. MIDI end-of-track timing
+preserves complete pattern lengths, including trailing empty patterns.
+Hardware note-off policy remains unresolved.
 The CLI dispatches one explicit subcommand and never guesses a file type. See
 the [memory-address reference](memory-map.md) for the layouts used by each
 module.
