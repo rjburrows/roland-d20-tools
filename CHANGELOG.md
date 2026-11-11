@@ -4,6 +4,13 @@
 
 ### Added
 
+- **BETA** factory rhythm preset extraction through `--factory-rom` on
+  `pattern`, `rhythm --notes`, `song`, and `all`. A supported owned tone ROM
+  supplies the 32 preset records. Rhythm all-pattern export includes 64
+  pattern tracks when the ROM is supplied.
+- Full pattern lengths and trailing rests are retained in MIDI end-of-track
+  timing, including empty patterns.
+
 - **BETA** saved-tempo extraction for Song and All exports and inspection.
   Header byte `0x36` gives `40 + 2 × code` BPM for codes `0x00..0x69`.
   Song/All export uses it by default and accepts `--tempo-bpm` as an override.
@@ -13,7 +20,7 @@
   scripts and read-only disk probes. Added a 100% branch-aware coverage gate
   for the Song and rhythm pattern decoders.
 - **BETA** expanded saved rhythm selection track in Song and All note MIDI
-  exports, with explicit rejection of undecoded ROM preset pattern IDs and
+  exports, with clear missing-ROM errors for factory preset pattern IDs and
   `--no-rhythm-track` for a Song-lanes-only export. The Rhythm command accepts
   `--notes pattern|all|track` to write note MIDI for one writable pattern,
   32 separate pattern tracks, or its saved pattern sequence. Note-off length
@@ -36,7 +43,7 @@
 
 ### Limitations
 
-- Original routing/patches, ROM preset pattern notes, and
+- Original routing/patches and
   hardware note-off policy are not yet decoded. Writable pattern chains are
   expanded. Standalone Rhythm and individual pattern exports require an
   explicit audition tempo. There is no native note-MIDI round trip.
@@ -44,6 +51,13 @@
 ## [0.2.0] - 2026-07-31
 
 ### Added
+
+- **BETA** factory rhythm preset extraction through `--factory-rom` on
+  `pattern`, `rhythm --notes`, `song`, and `all`. A supported owned tone ROM
+  supplies the 32 preset records. Rhythm all-pattern export includes 64
+  pattern tracks when the ROM is supplied.
+- Full pattern lengths and trailing rests are retained in MIDI end-of-track
+  timing, including empty patterns.
 
 - **BETA** saved-tempo extraction for Song and All exports and inspection.
   Header byte `0x36` gives `40 + 2 × code` BPM for codes `0x00..0x69`.
@@ -64,6 +78,13 @@
 ## [0.1.0] - 2026-07-30
 
 ### Added
+
+- **BETA** factory rhythm preset extraction through `--factory-rom` on
+  `pattern`, `rhythm --notes`, `song`, and `all`. A supported owned tone ROM
+  supplies the 32 preset records. Rhythm all-pattern export includes 64
+  pattern tracks when the ROM is supplied.
+- Full pattern lengths and trailing rests are retained in MIDI end-of-track
+  timing, including empty patterns.
 
 - **BETA** saved-tempo extraction for Song and All exports and inspection.
   Header byte `0x36` gives `40 + 2 × code` BPM for codes `0x00..0x69`.

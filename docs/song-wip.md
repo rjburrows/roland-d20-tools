@@ -25,13 +25,16 @@ The rhythm track follows the same pattern-ID list, expanding the note triples
 of each stored pattern at its recorded position; silent patterns retain their
 duration. `--gate-ticks 1..96` sets a provisional note-off length (default one
 tick). Original channel routing and patches, the exact device
-gate and ROM preset notes remain unresolved. The rhythm notes use MIDI
+gate remain unresolved. The rhythm notes use MIDI
 channel 10, while Song note lanes retain the stored status low nibble
 provisionally. Keep the original disk file; this is one-way.
 
-Pattern IDs `0x00`–`0x1F` refer to ROM presets whose note data is not yet
-decoded. If a Song chain contains one, export stops with a clear error. Use
-`--no-rhythm-track` to export only the Song note lanes in that case. A mismatch
+Pattern IDs `0x00`–`0x1F` refer to factory presets in the tone ROM. Supply
+`--factory-rom TONE_ROM.BIN` to expand them alongside the writable patterns.
+The supported 128 KiB image is checked by SHA-256, as documented in the
+[factory mapping guide](factory-rhythm-rom-mapping.md). Without that ROM, a
+preset selection reports an error. `--no-rhythm-track` exports the Song note
+lanes only. A mismatch
 between a saved pattern's beat length and the Song duration table also stops
 the rhythm expansion. Tempo belongs to the Song header and applies to the
 whole export. Individual rhythm patterns carry their own lengths and hits.

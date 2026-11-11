@@ -86,10 +86,40 @@ output channel (default 10). The selection list and pattern note bytes are
 separate from the `09H` Rhythm Setup; the pattern does not store a tempo.
 Standalone Rhythm note export requires an explicit tempo. The saved Song/All
 tempo reader applies to their arrangement exports.
-If the selection list includes a ROM preset ID (`0x00`–`0x1F`), track expansion
-reports an error: the preset notes are not yet decoded. The existing default
+A factory preset selection (`0x00`–`0x1F`) requires the supported tone ROM
+through `--factory-rom`. The command reports a missing-ROM error when that
+source is needed. The existing default
 `d20-tools rhythm RHYTHM.444 RHYTHM.mid` still exports the reversible SysEx
 representation; `--notes` selects the new note-event output.
 
 See the [firmware reverse-mapping guide](firmware-reverse-mapping.md) for the
 A/B editor trace, saved pattern layout, and evidence for the timing conversion.
+
+## Factory presets from the tone ROM (BETA)
+
+```sh
+d20-tools pattern RHYTHM.444 preset.mid --pattern-id 0x17 --factory-rom TONE_ROM.BIN --tempo-bpm 120
+d20-tools rhythm RHYTHM.444 all-patterns.mid --notes all --factory-rom TONE_ROM.BIN --tempo-bpm 120
+d20-tools rhythm RHYTHM.444 rhythm-track.mid --notes track --factory-rom TONE_ROM.BIN --tempo-bpm 120
+d20-tools song MYSONG.222 song.mid --factory-rom TONE_ROM.BIN
+d20-tools all MYBACKUP.111 all.mid --factory-rom TONE_ROM.BIN
+```
+
+IDs `0x00..0x1F` are P-11–P-48, and IDs `0x20..0x3F` are P-51–P-88.
+`--factory-rom` accepts the supported 131,072-byte tone ROM whose SHA-256 is
+`ae4aa5a80b5e5aba9584db6906707ea9d74fb04936a917e6e62585a4529782a1`.
+The file is validated locally. Supply the tone ROM separately from the A/B
+program ROMs and the PCM waveform ROMs. The package contains the extractor.
+
+With the ROM supplied, `--notes all` writes 64 pattern tracks plus the
+conductor. Without it, this mode writes the 32 writable pattern tracks.
+All pattern tracks start at zero and can be soloed individually. MIDI
+end-of-track events preserve the complete beat length, including empty
+patterns and rests after the last hit. Notes use the native file's raw
+Rhythm Setup metadata and default to MIDI channel 10.
+
+A saved rhythm chain may mix factory and writable IDs. Each selection uses
+its own beat length, and Song/All checks that length against the Song duration
+table. The user-selected note gate and the previously documented BETA timing
+assumptions also apply to factory patterns. See the
+[factory mapping guide](factory-rhythm-rom-mapping.md) for ROM evidence.

@@ -3,7 +3,8 @@
 The event grammar follows C 1.11 ROM 6F6A-6FDB and 6FDC-70B0. The 192-position
 storage interval follows 6ED1; 5E06/5EAA support 96 positions per quarter.
 Stored rhythm-pattern hits can be expanded along the selection list. ROM
-preset pattern notes, note-off policy, and routing remain unresolved.
+preset patterns can be read from an owned tone ROM. Note-off policy and
+routing remain unresolved.
 """
 
 from __future__ import annotations
@@ -141,7 +142,7 @@ def decode(raw: bytes) -> SongNotes:
 
 def convert(source: Path, destination: Path, *, tempo_bpm: int | None = None, force: bool,
             expected_kind: str | None = None, rhythm_track: bool = True,
-            gate_ticks: int = 1) -> str:
+            gate_ticks: int = 1, factory_rom: Path | None = None) -> str:
     """Write a Type-1 MIDI with one track per stored status lane, never modifying input."""
     source, destination = source.expanduser(), destination.expanduser()
     if destination.suffix.lower() not in {".mid", ".midi"}:
@@ -151,6 +152,9 @@ def convert(source: Path, destination: Path, *, tempo_bpm: int | None = None, fo
     if not 1 <= gate_ticks <= 96:
         raise D20Error("--gate-ticks must be 1..96 (provisional rhythm note-off length).")
     require_new_output(source, destination, force)
+    if factory_rom is not None:
+        require_new_output(factory_rom, destination, force)
+    factory = pattern.read_factory_rom(factory_rom)
     raw = read_file(source)
     parsed = decode(raw)
     if expected_kind and parsed.kind != expected_kind:
@@ -182,7 +186,7 @@ def convert(source: Path, destination: Path, *, tempo_bpm: int | None = None, fo
         midi.tracks.append(track)
     rhythm_detail = "rhythm omitted by request"
     if rhythm_track:
-        drum_track, selections, hits = pattern.expanded_rhythm_track(raw, gate_ticks=gate_ticks)
+        drum_track, selections, hits = pattern.expanded_rhythm_track(raw, gate_ticks=gate_ticks, factory_rom=factory)
         midi.tracks.append(drum_track)
         rhythm_detail = f"rhythm {selections} selections, {hits} hits"
     buffer = io.BytesIO()
@@ -191,5 +195,5 @@ def convert(source: Path, destination: Path, *, tempo_bpm: int | None = None, fo
     meters = f"{parsed.pattern_count} pattern selections" if parsed.pattern_count else "meter unavailable"
     return (f"BETA: exported {len(parsed.events)} note events from {parsed.kind} to {destination.name} "
             f"({len(lanes)} provisional lanes; 96 PPQ; {meters}; {rhythm_detail}; "
-            f"{tempo_source} tempo {effective_tempo} BPM). ROM preset notes, "
+            f"{tempo_source} tempo {effective_tempo} BPM). "
             "rhythm gate, and track routing remain undecoded.")
