@@ -1,5 +1,9 @@
 # Roland D-20 firmware reverse mapping
 
+The [input-producer checkpoint](song-input-producers.md) maps ASCI receive
+rings, channel dispatch tables, proprietary status normalization, staged
+controllers and atomic edit/index helpers.
+
 The [recording admission checkpoint](song-record-admission.md) reconstructs
 the mode/channel gates and staged program/note seeds, distinguishes recording
 CC64 filtering from playback filtering, and maps further atomic helpers.

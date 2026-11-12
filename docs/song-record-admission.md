@@ -1,5 +1,8 @@
 # Song recording admission checkpoint
 
+The later [input-producer checkpoint](song-input-producers.md) closes the two
+receive paths, identifies staged CC7/CC10, and maps edit/copy queues.
+
 This checkpoint follows the [controller/bend export](song-controller-pitch.md).
 It changes no decoder behavior. Pressure (`Ax`/`Dx`) and system/internal (`Fx`)
 records remain unsupported: a permissive serializer is not proof of their
