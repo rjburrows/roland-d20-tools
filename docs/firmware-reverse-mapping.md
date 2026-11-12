@@ -1,5 +1,9 @@
 # Roland D-20 firmware reverse mapping
 
+The [recording admission checkpoint](song-record-admission.md) reconstructs
+the mode/channel gates and staged program/note seeds, distinguishes recording
+CC64 filtering from playback filtering, and maps further atomic helpers.
+
 The [controller and pitch-bend checkpoint](song-controller-pitch.md) adds
 ROM-backed `Bx`/`Ex` extraction and the atomic record-state/headroom helpers
 `68DD`, `6924` and `6945`, with dependencies and unresolved branches.
