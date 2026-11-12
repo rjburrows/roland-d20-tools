@@ -152,7 +152,7 @@ class SongBetaTests(unittest.TestCase):
         with self.assertRaisesRegex(D20Error, "index"):
             song.decode(raw)
         raw = bytearray(fixture("SONG"))
-        raw[0x1A01] = 0xB0
+        raw[0x1A01] = 0xA0
         with self.assertRaisesRegex(D20Error, "Unsupported BETA"):
             song.decode(raw)
         raw = bytearray(fixture("SONG"))
@@ -203,7 +203,7 @@ class SongBetaTests(unittest.TestCase):
         raw = bytearray(fixture("SONG"))
         raw[0x283:0x289] = raw[0x41:0x44] + b"\xff" * 3
         raw[0x1A00] = 0xFF
-        with self.assertRaisesRegex(D20Error, "No supported Song note or program events"):
+        with self.assertRaisesRegex(D20Error, "No supported Song events"):
             song.decode(raw)
 
     def test_cli_note_only_export_can_omit_unvalidated_meter(self) -> None:

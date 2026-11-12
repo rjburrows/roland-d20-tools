@@ -4,6 +4,11 @@
 
 ### Added
 
+- **BETA** recorded controllers and 14-bit pitch bend in SONG/ALL MIDI,
+  preserving running status, repeated sustain, source order and raw values.
+  Inspection counts each event family. ROM evidence, atomic record-state and
+  headroom helpers, exhaustive generated fixtures and regression checks are
+  documented in the controller/bend guide; native wheel/CC validation is pending.
 - **BETA** recorded program changes in Song/All MIDI: preserve zero-based
   D-20 numbers, tick-zero and later selections, repeats and within-lane order.
   Program-only lanes are retained; matching stored instruments are required.

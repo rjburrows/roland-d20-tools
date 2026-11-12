@@ -61,7 +61,7 @@ assigning meanings solely from the specimen values.
 | --- | --- | --- | --- |
 | Setup pair at `16–1B` | Present in validation save | Present in validation save | Other or older header shapes remain unsupported as setup metadata. |
 | Tempo and saved lane flags | Shared Song-header layout | Shared Song-header layout | Flags select destinations; they are not MIDI channel numbers. |
-| Song events and indexed timing | Yes | Yes | Current BETA decoder accepts note and recorded program-change families. |
+| Song events and indexed timing | Yes | Yes | Current BETA decoder accepts notes, recorded programs, controllers and pitch bend; see the [event guide](song-controller-pitch.md). |
 | Stored Rhythm data | Embedded | Embedded | Includes Rhythm Setup and pattern/track records. |
 | Sound library | Not in the traced section list | Additional Sound section | Stored Patch/Timbre definitions do not establish which initial program a part selects. |
 | Initial part programs / active channel table | Not established | Not established | No defaults or GM programs are emitted. Absence has not been proven for every possible record or firmware version. |

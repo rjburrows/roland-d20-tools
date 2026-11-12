@@ -11,6 +11,9 @@ and a separate expanded rhythm track by default.
 Recorded `Cx` program changes are preserved too, including tick-zero instrument
 selection. Numbers remain D-20 references, without a GM sound translation.
 See the [program-change evidence and limits](song-program-changes.md).
+Recorded `Bx` controllers and `Ex` pitch bend also retain their values, timing
+and order, including repeated sustain and controller/bend-only lanes. See the
+[controller/bend evidence and limits](song-controller-pitch.md).
 The note events and relative timing follow the C 1.11 control ROM reader at
 `0x6F6A–0x6FDB`, the 192-position storage interval at `0x6ED1`, and the
 96-position-per-quarter duration table at `0x5EAA`. Stored one-data-byte `8x`
@@ -56,7 +59,8 @@ the rhythm expansion. Tempo belongs to the Song header and applies to the
 whole export. Individual rhythm patterns carry their own lengths and hits.
 
 The event index must point to separate `FF` boundary bytes and each parsed
-record must have a supported `8x`/`9x` note or `Cx` program status. Unsupported or malformed
+record must have a supported `8x`/`9x` note, `Bx` controller, `Cx` program
+or `Ex` pitch-bend status. Unsupported or malformed
 records cause a clear error before any output is written. The BETA grammar was
 validated against a paired Song/All disk capture and the C 1.11 ROM, but other
 firmware versions and compositions may contain event types this exporter does

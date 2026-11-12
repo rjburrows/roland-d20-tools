@@ -294,6 +294,7 @@ def _song_metadata(source: Path, native) -> list[tuple[str, str]]:
     try:
         notes = song.decode(raw)
         note_details = (f"BETA: {notes.note_count} note events and {notes.program_count} program changes "
+                        f"with {notes.controller_count} controller events and {notes.pitch_bend_count} pitch bends "
                         f"on stored lanes {notes.lanes}; 96 positions per quarter")
         meter_details = f"{notes.pattern_count} pattern selections; changes {notes.meter_changes}" if notes.pattern_count else "Pattern meter unverified"
     except D20Error:
