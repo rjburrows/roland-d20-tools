@@ -159,8 +159,8 @@ def parser() -> argparse.ArgumentParser:
     for name, extension in (("song", ".222"), ("all", ".111")):
         native = commands.add_parser(
             name,
-            help=f"BETA: export note events from a native {extension} file",
-            description=f"BETA Song note lanes, saved tempo and rhythm from native {extension}. Use --factory-rom when the chain selects ROM presets.",
+            help=f"BETA: export notes and program changes from a native {extension} file",
+            description=f"BETA Song notes/program references, saved tempo and rhythm from native {extension}. Use --factory-rom when the chain selects ROM presets.",
             epilog=examples(f"d20-tools {name} TEST{name.upper()}{extension} notes.mid --tempo-bpm 120"),
         )
         native.add_argument("input", type=Path, help=f"source native {extension} file")

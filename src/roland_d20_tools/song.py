@@ -1,4 +1,4 @@
-"""BETA, one-way note-event export from native D-20 Song and All files.
+"""BETA, one-way note/program-event export from native D-20 Song and All files.
 
 The event grammar follows C 1.11 ROM 6F6A-6FDB and 6FDC-70B0. The 192-position
 storage interval follows 6ED1; 5E06/5EAA support 96 positions per quarter.
@@ -52,15 +52,31 @@ class NoteEvent:
 
 
 @dataclass(frozen=True, slots=True)
+class ProgramEvent:
+    position: int
+    status: int
+    program: int  # original zero-based D-20 reference; no GM translation
+    file_offset: int
+
+
+@dataclass(frozen=True, slots=True)
 class SongNotes:
     kind: str
-    events: tuple[NoteEvent, ...]
+    events: tuple[NoteEvent | ProgramEvent, ...]
     meter_changes: tuple[tuple[int, int], ...]  # absolute position, numerator / 4
     pattern_count: int
 
     @property
     def lanes(self) -> tuple[int, ...]:
         return tuple(sorted({event.status & 0x0F for event in self.events}))
+
+    @property
+    def note_count(self) -> int:
+        return sum(isinstance(event, NoteEvent) for event in self.events)
+
+    @property
+    def program_count(self) -> int:
+        return len(self.events) - self.note_count
 
 
 def _kind(raw: bytes) -> str:
@@ -119,7 +135,7 @@ def saved_setup(raw: bytes) -> SavedSetup | None:
 
 
 def decode(raw: bytes) -> SongNotes:
-    """Validate indexed FF boundaries and read only the ROM-confirmed 8x/9x records."""
+    """Read ROM-confirmed 8x/9x notes and one-data-byte Cx program records."""
     kind = _kind(raw)
     base = int.from_bytes(raw[0x41:0x44], "little")
     if not base:
@@ -154,18 +170,21 @@ def decode(raw: bytes) -> SongNotes:
             if raw[offset] & 0x80:
                 status = raw[offset]
                 offset += 1
-            if status is None or status & 0xF0 not in (0x80, 0x90):
+            if status is None or status & 0xF0 not in (0x80, 0x90, 0xC0):
                 raise D20Error(f"Unsupported BETA Song status at file byte 0x{at:04X}.")
             size = 2 if status & 0xF0 == 0x90 else 1
             if offset + size > boundary or any(value > 0x7F for value in raw[offset:offset + size]):
-                raise D20Error(f"Invalid Song note data at file byte 0x{at:04X}.")
-            note = raw[offset]
-            velocity = raw[offset + 1] if size == 2 else 0
-            events.append(NoteEvent(interval * INTERVAL_POSITIONS + position, status, note, velocity, at))
+                raise D20Error(f"Invalid Song event data at file byte 0x{at:04X}.")
+            absolute = interval * INTERVAL_POSITIONS + position
+            if status & 0xF0 == 0xC0:
+                events.append(ProgramEvent(absolute, status, raw[offset], at))
+            else:
+                velocity = raw[offset + 1] if size == 2 else 0
+                events.append(NoteEvent(absolute, status, raw[offset], velocity, at))
             offset += size
         start = boundary + 1
     if not events:
-        raise D20Error("No supported Song note events were found.")
+        raise D20Error("No supported Song note or program events were found.")
     meter_changes, pattern_count = _meter(raw)
     return SongNotes(kind, tuple(events), meter_changes, pattern_count)
 
@@ -204,17 +223,25 @@ def convert(source: Path, destination: Path, *, tempo_bpm: int | None = None, fo
         conductor.append(mido.MetaMessage("time_signature", numerator=numerator, denominator=4, time=position - previous))
         previous = position
     midi.tracks.append(conductor)
-    lanes: dict[int, list[NoteEvent]] = {}
+    lanes: dict[int, list[NoteEvent | ProgramEvent]] = {}
     for event in parsed.events:
         lanes.setdefault(event.status & 0x0F, []).append(event)
     for lane, events in sorted(lanes.items()):
         track = mido.MidiTrack()
         track.append(mido.MetaMessage("track_name", name=f"Stored status lane {lane} (BETA provisional channel)", time=0))
+        if any(isinstance(event, ProgramEvent) for event in events):
+            track.append(mido.MetaMessage("text", text="D-20 program references preserved (0..127); "
+                                          "requires matching stored instruments; no General MIDI translation", time=0))
         previous = 0
         for event in events:
-            # ROM 6FCF converts the stored one-data-byte 8x off to 9x velocity zero.
-            track.append(mido.Message("note_on", channel=lane, note=event.note,
-                                      velocity=event.velocity, time=event.position - previous))
+            if isinstance(event, ProgramEvent):
+                message = mido.Message("program_change", channel=lane, program=event.program,
+                                       time=event.position - previous)
+            else:
+                # ROM 6FCF converts stored 8x off to 9x velocity zero.
+                message = mido.Message("note_on", channel=lane, note=event.note,
+                                       velocity=event.velocity, time=event.position - previous)
+            track.append(message)
             previous = event.position
         midi.tracks.append(track)
     rhythm_detail = "rhythm omitted by request"
@@ -226,7 +253,8 @@ def convert(source: Path, destination: Path, *, tempo_bpm: int | None = None, fo
     midi.save(file=buffer)
     atomic_write(destination, buffer.getvalue())
     meters = f"{parsed.pattern_count} pattern selections" if parsed.pattern_count else "meter unavailable"
-    return (f"BETA: exported {len(parsed.events)} note events from {parsed.kind} to {destination.name} "
+    return (f"BETA: exported {parsed.note_count} note events and {parsed.program_count} program changes "
+            f"from {parsed.kind} to {destination.name} "
             f"({len(lanes)} provisional lanes; 96 PPQ; {meters}; {rhythm_detail}; "
             f"{tempo_source} tempo {effective_tempo} BPM). "
             "rhythm gate, and track routing remain undecoded.")

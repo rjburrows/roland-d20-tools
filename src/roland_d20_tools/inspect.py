@@ -293,7 +293,8 @@ def _song_metadata(source: Path, native) -> list[tuple[str, str]]:
     from . import song
     try:
         notes = song.decode(raw)
-        note_details = f"BETA: {len(notes.events)} note events on stored lanes {notes.lanes}; 96 positions per quarter"
+        note_details = (f"BETA: {notes.note_count} note events and {notes.program_count} program changes "
+                        f"on stored lanes {notes.lanes}; 96 positions per quarter")
         meter_details = f"{notes.pattern_count} pattern selections; changes {notes.meter_changes}" if notes.pattern_count else "Pattern meter unverified"
     except D20Error:
         note_details = "BETA note decode unavailable for this container"

@@ -194,7 +194,7 @@ class SongBetaTests(unittest.TestCase):
             (0x41, b"\0" * 3, "physical base pointer"),
             (0x283, b"\xff" * 3, "missing its FF boundaries"),
             (0x1A00, b"\xc0", "Invalid Song position"),
-            (0x1A03, b"\x80", "Invalid Song note data"),
+            (0x1A03, b"\x80", "Invalid Song event data"),
         ):
             raw = bytearray(fixture("SONG"))
             raw[offset:offset + len(value)] = value
@@ -203,7 +203,7 @@ class SongBetaTests(unittest.TestCase):
         raw = bytearray(fixture("SONG"))
         raw[0x283:0x289] = raw[0x41:0x44] + b"\xff" * 3
         raw[0x1A00] = 0xFF
-        with self.assertRaisesRegex(D20Error, "No supported Song note events"):
+        with self.assertRaisesRegex(D20Error, "No supported Song note or program events"):
             song.decode(raw)
 
     def test_cli_note_only_export_can_omit_unvalidated_meter(self) -> None:

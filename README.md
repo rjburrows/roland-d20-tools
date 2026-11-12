@@ -29,8 +29,10 @@ expand saved pattern selections into a separate rhythm MIDI track; `.444` can
 export one, all, or its saved selection track. SONG and ALL read their saved
 tempo by default. Factory preset notes can be read from an owned tone ROM
 using `--factory-rom`; see the Rhythm guide for the supported image.
+Recorded program changes, including initial instrument selection at tick zero,
+retain their original D-20 references in SONG/ALL MIDI output.
 Recognized saved reverb and rhythm-level settings are retained as MIDI text
-and shown by inspection; initial instrument assignments remain unverified.
+and shown by inspection; unrecorded initial instrument defaults remain unverified.
 
 ## Install
 

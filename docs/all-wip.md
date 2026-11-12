@@ -17,6 +17,11 @@ note events to a Type-1 Standard MIDI file with a separate rhythm track
 following the embedded Song pattern list. It does not require a separate
 `.222` file or assume that two independently saved files contain the same song.
 
+Recorded `Cx` programs retain their original numbers, ticks and order. The
+embedded Sound library can supply referenced instruments, but the exporter
+does not assume Patch/Timbre mode or convert references to GM sounds.
+See the [program-change guide](song-program-changes.md).
+
 The saved tempo at header offset `0x36` is used by default, with the same
 validated code range and ROM formula as Song export. `--tempo-bpm 4..300`
 overrides it. An invalid saved code requires an override. Stored
@@ -24,7 +29,8 @@ rhythm-pattern hits are expanded on channel 10, with
 `--gate-ticks` controlling the provisional note-off length. Supply
 `--factory-rom TONE_ROM.BIN` to expand factory presets in the chain using the
 supported owned tone ROM. See the [factory mapping guide](factory-rhythm-rom-mapping.md).
-`--no-rhythm-track` exports the Song note lanes only. The output omits original channel and patch routing and
+`--no-rhythm-track` exports the Song lanes without the rhythm track. The output
+uses provisional lane channels and does not infer Patch/Timbre mode or include
 the embedded Sound/Rhythm SysEx domains. `d20-tools inspect`
 can inventory those embedded domains. This command is one-way; retain the
 original `.111` file. See [Song note export](song-wip.md) for the ROM-backed
