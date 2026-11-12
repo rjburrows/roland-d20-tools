@@ -1,5 +1,9 @@
 # Roland D-20 firmware reverse mapping
 
+The [command/edit audit](song-command-audit.md) inventories the remaining
+normal-view dispatch tables, immediate callbacks, direct serializer calls and
+scratch-list initialization. It records the scope of the completeness result.
+
 The [input-producer checkpoint](song-input-producers.md) maps ASCI receive
 rings, channel dispatch tables, proprietary status normalization, staged
 controllers and atomic edit/index helpers.

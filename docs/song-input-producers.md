@@ -1,5 +1,9 @@
 # SONG input producers and edit queues
 
+The [command/edit audit](song-command-audit.md) inventories the remaining
+normal-view dispatch tables, immediate callbacks, direct serializer calls and
+scratch-list initialization. It records the scope of the completeness result.
+
 This extends the [recording admission checkpoint](song-record-admission.md).
 It closes the source of `B47E–B480` and identifies the two staged controller
 records. It adds evidence and function mappings, with no decoder changes.
@@ -119,7 +123,8 @@ were discarded. Original ROM/native bytes and generated evidence stay local.
 Documentation-only changes require no new runtime tests; the unsupported
 pressure/system regression cases remain in the suite.
 
-Still unresolved: the complete ASCI1 command and data-handler tables, all UI
-labels for recording flags, and every producer of edit scratch queues. The
-next useful step is a systematic inventory of the ASCI1 command states and
-remaining direct serializer callers, followed by native capture validation.
+This checkpoint initially left the ASCI1 command/data tables and edit queue
+origins open. The later [command/edit audit](song-command-audit.md) inventories
+those tables, immediate callbacks and direct writer calls, and identifies the
+scratch initialization. UI flag labels, indirect state combinations and
+independent native capture validation remain open.
